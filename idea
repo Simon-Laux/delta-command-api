@@ -1,0 +1,12 @@
+
+You send data to the backend that is basicaly a struct:
+
+{
+    command_id,
+    ...parameters
+}
+
+which first gets parsed by serde as a command (this only reads the id and the other fields are ignored)
+
+then there is a match statement that matches the command is and tries to parse the data as the requested "call signature struct" 
+which parses the parameters and if a parameter is missing it returns an error object
