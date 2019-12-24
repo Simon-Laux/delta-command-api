@@ -14,4 +14,8 @@ export class DeltaChat {
     async echo (message:string) {
         return this.transport.send(1, {message})
     }
+
+    async add (a:number, b:number) {
+        return this.transport.send(2, {a,b})
+    }
 }

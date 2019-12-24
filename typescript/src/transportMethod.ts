@@ -9,6 +9,7 @@ export class WebsocketTransport implements TransportMethod {
     callbacks: { res: Function, rej: Function }[] = []
     socket: WebSocket
     initialized = false
+    online = false
 
     constructor(private address: string, private format: import("./transportFormat").TransportFormat) {
         
@@ -44,11 +45,17 @@ export class WebsocketTransport implements TransportMethod {
             this.socket.addEventListener('error', (event) => {
                 console.error(event)
                 // todo handle error
+                this.online = false
                 rej()
             });
+            this.socket.addEventListener('close', (event) => {
+                console.debug("socket is closed now");
+                this.online = false
+            })
             this.socket.addEventListener('open', (event) => {
                 console.debug("socket is open now");
                 this.initialized = true
+                this.online = true
                 res()
             });
         })
@@ -60,6 +67,8 @@ export class WebsocketTransport implements TransportMethod {
     }> {
         if(!this.initialized)
             throw new Error("Socket wasn't initilized yet")
+        if(!this.online)
+            throw new Error("Not online")
 
         let callback;
 
@@ -79,5 +88,9 @@ export class WebsocketTransport implements TransportMethod {
 
     _currentCallCount() {
         return this.callbacks.length
+    }
+    
+    _currentUnresolvedCallCount() {
+        return this.callbacks.filter(cb => cb !== null).length
     }
 }

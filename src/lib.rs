@@ -20,23 +20,29 @@ enum ErrorType {
     CommandParseFailure,
 }
 
+macro_rules! command {
+    ($cmd: expr, $command: expr, $cmdType: ty, $cmdFunction: expr) => {{
+        // are those macro types right?
+        let result = serde_json::from_str::<$cmdType>($command);
+        if let Ok(args) = result {
+            serde_json::to_string(&$cmdFunction(args, $cmd.invocation_id)).unwrap()
+        } else {
+            serde_json::to_string(&ErrorInstance {
+                kind: ErrorType::CommandParseFailure,
+                message: format!("command arguments invalid: {:?}", result.err()),
+                invocation_id: $cmd.invocation_id,
+            })
+            .unwrap()
+        }
+    }};
+}
+
 pub fn run_json(command: &str) -> String {
     return {
         if let Ok(cmd) = serde_json::from_str::<Command>(command) {
             match cmd.command_id {
-                1 => {
-                    let result = serde_json::from_str::<EchoCommand>(command);
-                    if let Ok(echo_args) = result {
-                        serde_json::to_string(&echo(echo_args, cmd.invocation_id)).unwrap()
-                    } else {
-                        serde_json::to_string(&ErrorInstance {
-                            kind: ErrorType::CommandParseFailure,
-                            message: format!("command arguments invalid: {:?}", result.err()),
-                            invocation_id: cmd.invocation_id,
-                        })
-                        .unwrap()
-                    }
-                }
+                1 => command!(cmd, command, EchoCommand, echo),
+                2 => command!(cmd, command, AddCommand, add),
                 _ => serde_json::to_string(&ErrorInstance {
                     kind: ErrorType::CommandNotFound,
                     message: format!("command with the id {} not found", cmd.command_id),
@@ -48,7 +54,7 @@ pub fn run_json(command: &str) -> String {
             serde_json::to_string(&ErrorInstance {
                 kind: ErrorType::CommandIdMissing,
                 message: "You need to specify a commandId".to_owned(),
-                invocation_id: 0
+                invocation_id: 0,
             })
             .unwrap()
         }
@@ -73,10 +79,28 @@ fn echo(args: EchoCommand, invocation_id: u32) -> EchoResult {
     }
 }
 
+#[derive(Deserialize, Debug)]
+struct AddCommand {
+    a: u32,
+    b: u32,
+}
+
+#[derive(Serialize, Debug)]
+struct AddCommandResult {
+    result: u32,
+    invocation_id: u32,
+}
+
+fn add(args: AddCommand, invocation_id: u32) -> AddCommandResult {
+    AddCommandResult {
+        result: args.a + args.b,
+        invocation_id: invocation_id,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    
     #[test]
     fn echo() {
         assert_eq!(
