@@ -1,8 +1,10 @@
 {
     "compilerOptions": {
         "outDir": "dist",
-        "target": "ES5",
+        "target": "ES2016",
+        "module": "commonjs",
         "declaration": true,
+        "esModuleInterop": true
     },
     "compileOnSave": true
 }

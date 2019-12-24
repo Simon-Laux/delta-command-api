@@ -3,12 +3,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Debug)]
 struct Command {
     command_id: u32,
+    invocation_id: u32,
 }
 
 #[derive(Serialize, Debug)]
 struct ErrorInstance {
     kind: ErrorType,
     message: String,
+    invocation_id: u32,
 }
 
 #[derive(Serialize, Debug)]
@@ -25,11 +27,12 @@ pub fn run_json(command: &str) -> String {
                 1 => {
                     let result = serde_json::from_str::<EchoCommand>(command);
                     if let Ok(echo_args) = result {
-                        serde_json::to_string(&echo(echo_args)).unwrap()
+                        serde_json::to_string(&echo(echo_args, cmd.invocation_id)).unwrap()
                     } else {
                         serde_json::to_string(&ErrorInstance {
                             kind: ErrorType::CommandParseFailure,
                             message: format!("command arguments invalid: {:?}", result.err()),
+                            invocation_id: cmd.invocation_id,
                         })
                         .unwrap()
                     }
@@ -37,6 +40,7 @@ pub fn run_json(command: &str) -> String {
                 _ => serde_json::to_string(&ErrorInstance {
                     kind: ErrorType::CommandNotFound,
                     message: format!("command with the id {} not found", cmd.command_id),
+                    invocation_id: cmd.invocation_id,
                 })
                 .unwrap(),
             }
@@ -44,6 +48,7 @@ pub fn run_json(command: &str) -> String {
             serde_json::to_string(&ErrorInstance {
                 kind: ErrorType::CommandIdMissing,
                 message: "You need to specify a commandId".to_owned(),
+                invocation_id: 0
             })
             .unwrap()
         }
@@ -58,11 +63,13 @@ struct EchoCommand<'t> {
 #[derive(Serialize, Debug)]
 struct EchoResult<'t> {
     message: &'t str,
+    invocation_id: u32,
 }
 
-fn echo(args: EchoCommand) -> EchoResult {
+fn echo(args: EchoCommand, invocation_id: u32) -> EchoResult {
     EchoResult {
         message: args.message,
+        invocation_id: invocation_id,
     }
 }
 

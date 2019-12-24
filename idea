@@ -10,3 +10,12 @@ which first gets parsed by serde as a command (this only reads the id and the ot
 
 then there is a match statement that matches the command is and tries to parse the data as the requested "call signature struct" 
 which parses the parameters and if a parameter is missing it returns an error object
+
+
+Thoughts:
+- When creating a context on each connection, what do we do when the connection is lost?
+should we add an session protocol?
+
+TODO:
+- add command invocation ids like in IMAP
+- make async

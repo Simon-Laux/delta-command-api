@@ -1,11 +1,15 @@
 const { DeltaChat, WebsocketTransport, JSONTransport } = require("./dist/index")
 
-const dc = new DeltaChat(
-    new WebsocketTransport(
-        "localhost",
+let websocket = new WebsocketTransport(
+        "ws://localhost:29031",
         new JSONTransport()
     )
+
+const dc = new DeltaChat(
+    websocket
 )
+
+websocket.setup()
 
 global.dc = dc
 

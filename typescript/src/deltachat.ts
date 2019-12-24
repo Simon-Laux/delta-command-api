@@ -12,6 +12,6 @@ export class DeltaChat {
     }
 
     async echo (message:string) {
-        return this.transport.send(0, {message})
+        return this.transport.send(1, {message})
     }
 }
