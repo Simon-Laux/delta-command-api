@@ -7,7 +7,7 @@ export class DeltaChat {
     return this.transport.send(0, {});
   }
 
-  async echo(message: string) {
+  async echo(message: string): Promise<string> {
     return this.transport.send(1, { message });
   }
 

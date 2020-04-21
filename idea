@@ -3,6 +3,7 @@ You send data to the backend that is basicaly a struct:
 
 {
     command_id,
+    invocation_id,
     ...parameters
 }
 
@@ -17,5 +18,4 @@ Thoughts:
 should we add an session protocol?
 
 TODO:
-- add command invocation ids like in IMAP
 - make async
