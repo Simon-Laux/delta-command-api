@@ -1,21 +1,17 @@
-import {TransportMethod} from "./transportMethod";
+import { TransportMethod } from "./transportMethod";
 
 export class DeltaChat {
+  constructor(public transport: TransportMethod) {}
 
-    constructor (
-        public transport:TransportMethod
-    ){}
+  async getInfo() {
+    return this.transport.send(0, {});
+  }
 
-    
-    async getInfo () {
-        return this.transport.send(0, {})
-    }
+  async echo(message: string) {
+    return this.transport.send(1, { message });
+  }
 
-    async echo (message:string) {
-        return this.transport.send(1, {message})
-    }
-
-    async add (a:number, b:number) {
-        return this.transport.send(2, {a,b})
-    }
+  async add(a: number, b: number): Promise<number> {
+    return this.transport.send(2, { a, b });
+  }
 }

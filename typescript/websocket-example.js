@@ -1,17 +1,18 @@
-const { DeltaChat, WebsocketTransport, JSONTransport } = require("./dist/index")
+const {
+  DeltaChat,
+  WebsocketTransport,
+  JSONTransport
+} = require("./dist/index");
 
 let websocket = new WebsocketTransport(
-        "ws://localhost:29031",
-        new JSONTransport()
-    )
+  "ws://localhost:29031",
+  new JSONTransport()
+);
 
-const dc = new DeltaChat(
-    websocket
-)
+const dc = new DeltaChat(websocket);
 
-websocket.setup()
+websocket.setup();
 
-global.dc = dc
+global.dc = dc;
 
-
-setInterval(()=>{}, 100000)
+setInterval(() => {}, 100000);
