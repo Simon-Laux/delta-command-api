@@ -16,6 +16,7 @@
     "ws": "^7.2.1"
   },
   "devDependencies": {
+    "@types/ws": "^7.2.4",
     "prettier": "^2.0.5"
   }
 }
