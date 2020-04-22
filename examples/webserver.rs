@@ -24,25 +24,19 @@ fn main() {
                 // }
 
                 // Let's add an additional header to our response to the client.
-                let extra_headers = vec![
-                    (String::from("MyCustomHeader"), String::from(":)")),
-                    (
-                        String::from("SOME_TUNGSTENITE_HEADER"),
-                        String::from("header_value"),
-                    ),
-                ];
+                let extra_headers = vec![(String::from("MyCustomHeader"), String::from(":)"))];
                 Ok(Some(extra_headers))
             };
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
 
             loop {
                 let msg = websocket.read_message().unwrap();
-                if /* msg.is_binary() || */ msg.is_text() {
+                if
+                /* msg.is_binary() || */
+                msg.is_text() {
                     println!(":{:?}:", msg);
                     let answer = Text(run_json(msg.to_text().unwrap()));
-                    websocket.write_message(
-                        answer
-                    ).unwrap();
+                    websocket.write_message(answer).unwrap();
                 }
             }
         });
