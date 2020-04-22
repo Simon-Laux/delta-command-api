@@ -1,3 +1,4 @@
+use deltachat_command_derive::{api_function, get_args_struct};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
@@ -20,29 +21,29 @@ enum ErrorType {
     CommandParseFailure,
 }
 
-macro_rules! command {
-    ($cmd: expr, $command: expr, $cmdType: ty, $cmdFunction: expr) => {{
-        // are those macro types right?
-        let result = serde_json::from_str::<$cmdType>($command);
-        if let Ok(args) = result {
-            serde_json::to_string(&$cmdFunction(args, $cmd.invocation_id)).unwrap()
-        } else {
-            serde_json::to_string(&ErrorInstance {
-                kind: ErrorType::CommandParseFailure,
-                message: format!("command arguments invalid: {:?}", result.err()),
-                invocation_id: $cmd.invocation_id,
-            })
-            .unwrap()
-        }
-    }};
-}
-
 pub fn run_json(command: &str) -> String {
     return {
         if let Ok(cmd) = serde_json::from_str::<Command>(command) {
+            macro_rules! command {
+                ($cmdFunction: expr) => {{
+                    let result = serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
+                    if let Ok(args) = result {
+                        serde_json::to_string(&$cmdFunction(args, cmd.invocation_id)).unwrap()
+                    } else {
+                        serde_json::to_string(&ErrorInstance {
+                            kind: ErrorType::CommandParseFailure,
+                            message: format!("command arguments invalid: {:?}", result.err()),
+                            invocation_id: cmd.invocation_id,
+                        })
+                        .unwrap()
+                    }
+                }};
+            }
             match cmd.command_id {
-                1 => command!(cmd, command, EchoCommand, echo),
-                2 => command!(cmd, command, AddCommand, add),
+                0 => command!(info),
+                1 => command!(echo),
+                2 => command!(add),
+                3 => command!(subtract),
                 _ => serde_json::to_string(&ErrorInstance {
                     kind: ErrorType::CommandNotFound,
                     message: format!("command with the id {} not found", cmd.command_id),
@@ -61,42 +62,37 @@ pub fn run_json(command: &str) -> String {
     };
 }
 
-#[derive(Deserialize, Debug)]
-struct EchoCommand<'t> {
-    message: &'t str,
-}
-
 #[derive(Serialize, Debug)]
-struct EchoResult<'t> {
-    message: &'t str,
-    invocation_id: u32,
+struct Info {
+    sample_version: u8,
+    sample_info: String,
 }
 
-fn echo(args: EchoCommand, invocation_id: u32) -> EchoResult {
-    EchoResult {
-        message: args.message,
-        invocation_id: invocation_id,
+api_function!(
+    fn info() -> Info {
+        Info {
+            sample_version: 9,
+            sample_info: "Sample Info".to_owned(),
+        }
     }
-}
-
-#[derive(Deserialize, Debug)]
-struct AddCommand {
-    a: u32,
-    b: u32,
-}
-
-#[derive(Serialize, Debug)]
-struct AddCommandResult {
-    result: u32,
-    invocation_id: u32,
-}
-
-fn add(args: AddCommand, invocation_id: u32) -> AddCommandResult {
-    AddCommandResult {
-        result: args.a + args.b,
-        invocation_id: invocation_id,
+);
+api_function!(
+    fn echo<'t>(message: &'t str) -> &'t str {
+        message
     }
-}
+);
+
+api_function!(
+    fn add(a: u32, b: u32) -> u32 {
+        a + b
+    }
+);
+
+api_function!(
+    fn subtract(a: u32, b: u32) -> u32 {
+        a - b
+    }
+);
 
 #[cfg(test)]
 mod tests {

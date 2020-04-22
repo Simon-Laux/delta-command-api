@@ -1,0 +1,17 @@
+[package]
+name = "deltachat_command_derive"
+version = "0.1.0"
+authors = ["Simon Laux <mobile.info@simonlaux.de>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0.2"
+syn = { version = "1.0.17", feature = "full" }
+
+[dependencies.proc-macro2]
+version = "1.0.7"
+default-features = false
