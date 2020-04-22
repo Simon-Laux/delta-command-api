@@ -7,6 +7,17 @@ use quote::quote;
 use syn;
 
 #[proc_macro]
+pub fn get_args_struct(input: TokenStream) -> TokenStream {
+    let fn_name: Ident = syn::parse(input).unwrap();
+    let new_ident = Ident::new(&format!("cmd_{}_args", fn_name), Span::call_site());
+    let r = proc_macro2::Group::new(
+        proc_macro2::Delimiter::None,
+        proc_macro2::TokenStream::from(quote! {#new_ident}),
+    );
+    TokenStream::from(quote! {#r})
+}
+
+#[proc_macro]
 pub fn api_function(input: TokenStream) -> TokenStream {
     let ast: syn::ItemFn = syn::parse(input).unwrap();
     let fn_name = &ast.sig.ident;
@@ -16,6 +27,8 @@ pub fn api_function(input: TokenStream) -> TokenStream {
     let result_ident = Ident::new(&format!("cmd_{}_res", fn_name), Span::call_site());
     let fn_output = &ast.sig.output;
     let fn_block = &ast.block;
+
+    let fn_generics = &ast.sig.generics; // the lifetimes
 
     let mut argument_idents: Vec<proc_macro2::TokenStream> = Vec::new();
 
@@ -35,18 +48,18 @@ pub fn api_function(input: TokenStream) -> TokenStream {
     }
 
     let argument_assigning = argument_idents
-            .into_iter()
-            .collect::<proc_macro2::TokenStream>();
+        .into_iter()
+        .collect::<proc_macro2::TokenStream>();
 
     let result_struct = match fn_output {
         syn::ReturnType::Default => quote! {
-            struct #result_ident {
+            struct #result_ident #fn_generics{
                 invocation_id: u32,
             }
         },
         syn::ReturnType::Type(_, type_box) => {
             quote! {
-                struct #result_ident {
+                struct #result_ident #fn_generics{
                     result: #type_box,
                     invocation_id: u32,
                 }
@@ -56,7 +69,7 @@ pub fn api_function(input: TokenStream) -> TokenStream {
 
     let result = quote! {
         #[derive(Deserialize, Debug)]
-        struct #arguments_ident {
+        struct #arguments_ident #fn_generics{
             #fn_inputs
         }
         #[derive(Serialize, Debug)]

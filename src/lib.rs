@@ -1,4 +1,4 @@
-use deltachat_command_derive::api_function;
+use deltachat_command_derive::{api_function, get_args_struct};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
@@ -25,8 +25,8 @@ pub fn run_json(command: &str) -> String {
     return {
         if let Ok(cmd) = serde_json::from_str::<Command>(command) {
             macro_rules! command {
-                ($cmdType: ty, $cmdFunction: expr) => {{
-                    let result = serde_json::from_str::<$cmdType>(command);
+                ($cmdFunction: expr) => {{
+                    let result = serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
                     if let Ok(args) = result {
                         serde_json::to_string(&$cmdFunction(args, cmd.invocation_id)).unwrap()
                     } else {
@@ -40,10 +40,10 @@ pub fn run_json(command: &str) -> String {
                 }};
             }
             match cmd.command_id {
-                0 => command!(cmd_info_args, info),
-                1 => command!(EchoCommand, echo),
-                2 => command!(AddCommand, add),
-                3 => command!(cmd_subtract_args, subtract),
+                0 => command!(info),
+                1 => command!(echo),
+                2 => command!(add),
+                3 => command!(subtract),
                 _ => serde_json::to_string(&ErrorInstance {
                     kind: ErrorType::CommandNotFound,
                     message: format!("command with the id {} not found", cmd.command_id),
@@ -76,43 +76,17 @@ api_function!(
         }
     }
 );
-
-#[derive(Deserialize, Debug)]
-struct EchoCommand<'t> {
-    message: &'t str,
-}
-
-#[derive(Serialize, Debug)]
-struct EchoResult<'t> {
-    message: &'t str,
-    invocation_id: u32,
-}
-
-fn echo(args: EchoCommand, invocation_id: u32) -> EchoResult {
-    EchoResult {
-        message: args.message,
-        invocation_id: invocation_id,
+api_function!(
+    fn echo<'t>(message: &'t str) -> &'t str {
+        message
     }
-}
+);
 
-#[derive(Deserialize, Debug)]
-struct AddCommand {
-    a: u32,
-    b: u32,
-}
-
-#[derive(Serialize, Debug)]
-struct AddCommandResult {
-    result: u32,
-    invocation_id: u32,
-}
-
-fn add(args: AddCommand, invocation_id: u32) -> AddCommandResult {
-    AddCommandResult {
-        result: args.a + args.b,
-        invocation_id: invocation_id,
+api_function!(
+    fn add(a: u32, b: u32) -> u32 {
+        a + b
     }
-}
+);
 
 api_function!(
     fn subtract(a: u32, b: u32) -> u32 {
