@@ -21,31 +21,29 @@ enum ErrorType {
     CommandParseFailure,
 }
 
-macro_rules! command {
-    ($cmd: expr, $command: expr, $cmdType: ty, $cmdFunction: expr) => {{
-        // are those macro types right?
-        let result = serde_json::from_str::<$cmdType>($command);
-        if let Ok(args) = result {
-            serde_json::to_string(&$cmdFunction(args, $cmd.invocation_id)).unwrap()
-        } else {
-            serde_json::to_string(&ErrorInstance {
-                kind: ErrorType::CommandParseFailure,
-                message: format!("command arguments invalid: {:?}", result.err()),
-                invocation_id: $cmd.invocation_id,
-            })
-            .unwrap()
-        }
-    }};
-}
-
 pub fn run_json(command: &str) -> String {
     return {
         if let Ok(cmd) = serde_json::from_str::<Command>(command) {
+            macro_rules! command {
+                ($cmdType: ty, $cmdFunction: expr) => {{
+                    let result = serde_json::from_str::<$cmdType>(command);
+                    if let Ok(args) = result {
+                        serde_json::to_string(&$cmdFunction(args, cmd.invocation_id)).unwrap()
+                    } else {
+                        serde_json::to_string(&ErrorInstance {
+                            kind: ErrorType::CommandParseFailure,
+                            message: format!("command arguments invalid: {:?}", result.err()),
+                            invocation_id: cmd.invocation_id,
+                        })
+                        .unwrap()
+                    }
+                }};
+            }
             match cmd.command_id {
-                0 => command!(cmd, command, cmd_info_args, info),
-                1 => command!(cmd, command, EchoCommand, echo),
-                2 => command!(cmd, command, AddCommand, add),
-                3 => command!(cmd, command, cmd_subtract_args, subtract),
+                0 => command!(cmd_info_args, info),
+                1 => command!(EchoCommand, echo),
+                2 => command!(AddCommand, add),
+                3 => command!(cmd_subtract_args, subtract),
                 _ => serde_json::to_string(&ErrorInstance {
                     kind: ErrorType::CommandNotFound,
                     message: format!("command with the id {} not found", cmd.command_id),
