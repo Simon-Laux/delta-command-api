@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use deltachat_command_derive::api_function;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 struct Command {
@@ -42,6 +42,7 @@ pub fn run_json(command: &str) -> String {
     return {
         if let Ok(cmd) = serde_json::from_str::<Command>(command) {
             match cmd.command_id {
+                0 => command!(cmd, command, cmd_info_args, info),
                 1 => command!(cmd, command, EchoCommand, echo),
                 2 => command!(cmd, command, AddCommand, add),
                 3 => command!(cmd, command, cmd_subtract_args, subtract),
@@ -62,6 +63,21 @@ pub fn run_json(command: &str) -> String {
         }
     };
 }
+
+#[derive(Serialize, Debug)]
+struct Info {
+    sample_version: u8,
+    sample_info: String,
+}
+
+api_function!(
+    fn info() -> Info {
+        Info {
+            sample_version: 9,
+            sample_info: "Sample Info".to_owned(),
+        }
+    }
+);
 
 #[derive(Deserialize, Debug)]
 struct EchoCommand<'t> {
