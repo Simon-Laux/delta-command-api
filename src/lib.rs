@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use deltachat_command_derive::api_function;
 
 #[derive(Deserialize, Debug)]
 struct Command {
@@ -43,6 +44,7 @@ pub fn run_json(command: &str) -> String {
             match cmd.command_id {
                 1 => command!(cmd, command, EchoCommand, echo),
                 2 => command!(cmd, command, AddCommand, add),
+                3 => command!(cmd, command, cmd_subtract_args, subtract),
                 _ => serde_json::to_string(&ErrorInstance {
                     kind: ErrorType::CommandNotFound,
                     message: format!("command with the id {} not found", cmd.command_id),
@@ -97,6 +99,12 @@ fn add(args: AddCommand, invocation_id: u32) -> AddCommandResult {
         invocation_id: invocation_id,
     }
 }
+
+api_function!(
+    fn subtract(a: u32, b: u32) -> u32 {
+        a - b
+    }
+);
 
 #[cfg(test)]
 mod tests {

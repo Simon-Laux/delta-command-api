@@ -14,4 +14,8 @@ export class DeltaChat {
   async add(a: number, b: number): Promise<number> {
     return this.transport.send(2, { a, b });
   }
+
+  async subtract(a: number, b: number): Promise<number> {
+    return this.transport.send(3, { a, b });
+  }
 }

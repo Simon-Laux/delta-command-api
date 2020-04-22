@@ -15,3 +15,9 @@ tungstenite = { version = "0.9.2", default-features = false }
 
 syn = "1.0.17" # fix version conflict
 deltachat = { git = "https://github.com/deltachat/deltachat-core-rust", rev = "3a25d6b" }
+deltachat_command_derive = { path = "./deltachat_command_derive" }
+
+[workspace]
+members = [
+  "deltachat_command_derive",
+]
