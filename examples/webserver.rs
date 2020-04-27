@@ -37,9 +37,8 @@ fn main() {
     let ctx = Context::new(
         Box::new(|_ctx: &Context, event: Event| {
             // println!("[EV]{:?}", event)
-            if evq0 {
-                evq0.write().unwrap().push(event)
-            }
+
+            evq0.write().unwrap().push(event)
         }),
         "FakeOs".into(),
         dbfile,

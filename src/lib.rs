@@ -7,7 +7,7 @@ use deltachat::Event;
 
 pub struct Account {
     pub ctx: std::sync::Arc<Context>,
-    pub event_queu: &'static std::sync::RwLock<Vec<Event>>,
+    pub event_queu: std::sync::Arc<std::sync::RwLock<Vec<Event>>>,
 }
 
 impl Account {
