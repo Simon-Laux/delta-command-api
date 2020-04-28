@@ -33,6 +33,7 @@ impl Account {
                 }
                 match cmd.command_id {
                     0 => command!(info),
+                    5 => command!(get_next_event_as_string),
                     _ => serde_json::to_string(&ErrorInstance {
                         kind: ErrorType::CommandNotFound,
                         message: format!("command with the id {} not found", cmd.command_id),
@@ -54,6 +55,16 @@ impl Account {
 api_function2!(
     fn info() -> std::collections::HashMap<&'static str, std::string::String> {
         account.ctx.get_info()
+    }
+);
+api_function2!(
+    fn get_next_event_as_string() -> Option<String> {
+        let mut event_queu = account.event_queu.write().unwrap();
+        if event_queu.len() > 0 {
+            Some(format!("{:?}", event_queu.remove(0)))
+        } else {
+            None
+        }
     }
 );
 

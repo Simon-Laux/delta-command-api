@@ -16,3 +16,22 @@ websocket.setup();
 global.dc = dc;
 
 setInterval(() => {}, 100000);
+
+async function logEvents() {
+  /** @type {string} */
+  let ev;
+  while ((ev = await dc._get_next_event_as_string())) {
+    if (ev.includes("Info")) {
+      console.info(ev);
+    } else if (ev.includes("Warning")) {
+      console.warn(ev);
+    } else if (ev.includes("Error")) {
+      console.error(ev);
+    } else {
+      console.debug(ev);
+    }
+  }
+  // TODO: somehow make sure that this gets restarted when the promise fails.
+}
+
+global.logEvents = logEvents;

@@ -22,3 +22,6 @@ TODO:
 - connect deltachat
 
 - make async
+
+
+- we need a modified deltachat core that is able to serialize Events

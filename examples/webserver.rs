@@ -35,7 +35,7 @@ fn main() {
     let evq = Arc::new(event_queu);
     let evq0 = evq.clone();
     let ctx = Context::new(
-        Box::new(|_ctx: &Context, event: Event| {
+        Box::new(move |_ctx: &Context, event: Event| {
             // println!("[EV]{:?}", event)
 
             evq0.write().unwrap().push(event)
