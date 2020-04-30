@@ -1,22 +1,16 @@
 use delta_command_api::*;
 use std::env::current_dir;
-use std::env::vars;
-use std::sync::{atomic, Arc, RwLock};
+use std::sync::{Arc, RwLock};
 use std::thread;
 
-use deltachat::chat::*;
-use deltachat::config;
-use deltachat::constants::{Chattype, Viewtype, DC_CONTACT_ID_SELF};
 use deltachat::context::*;
-use deltachat::error::Error;
 use deltachat::job::{
     perform_inbox_fetch, perform_inbox_idle, perform_inbox_jobs, perform_smtp_idle,
     perform_smtp_jobs,
 };
-use deltachat::message::*;
 use deltachat::Event;
 
-// this eample will use websocket+json
+// this example will use websocket+json
 
 use std::net::TcpListener;
 use std::thread::spawn;
@@ -26,7 +20,7 @@ use tungstenite::handshake::server::Request;
 
 use tungstenite::Message::Text;
 
-fn main() {
+fn open_account() -> (Account, Box<dyn FnOnce() -> ()>) {
     let dbdir = current_dir().unwrap().join("deltachat-db");
     std::fs::create_dir_all(dbdir.clone()).unwrap();
     let dbfile = dbdir.join("db.sqlite");
@@ -80,6 +74,23 @@ fn main() {
         }
     });
 
+    let close_fn = move || {
+        println!("stopping threads");
+        *running.write().unwrap() = false;
+        deltachat::job::interrupt_inbox_idle(&ctx);
+        deltachat::job::interrupt_smtp_idle(&ctx);
+
+        println!("joining");
+        _t1.join().unwrap();
+        _t2.join().unwrap();
+
+        println!("closing");
+    };
+
+    (account, Box::new(close_fn))
+}
+
+fn main() {
     // println!("configuring");
 
     // if let Some(addr) = vars().find(|key| key.0 == "addr") {
@@ -96,12 +107,9 @@ fn main() {
 
     // ctx.configure();
 
-    let acc = Arc::new(account);
-
     let server = TcpListener::bind("127.0.0.1:29031").unwrap();
     println!("server running on {:?}", server.local_addr());
     for stream in server.incoming() {
-        let acc0 = acc.clone();
         spawn(move || {
             let callback = |req: &Request| {
                 println!("Received a new ws handshake");
@@ -117,27 +125,84 @@ fn main() {
             };
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
 
+            let mut account: Option<(Account, Box<dyn FnOnce() -> ()>)> = None;
+
             loop {
-                let msg = websocket.read_message().unwrap();
-                if
-                /* msg.is_binary() || */
-                msg.is_text() {
-                    println!(":{:?}:", msg);
-                    let answer = Text(acc0.run_json(msg.to_text().unwrap()));
-                    websocket.write_message(answer).unwrap();
+                let read_msg = websocket.read_message();
+                if let Ok(msg) = read_msg {
+                    if
+                    /* msg.is_binary() || */
+                    msg.is_text() {
+                        println!(":{:?}:", msg);
+                        let command = msg.to_text().unwrap();
+                        let result: String = {
+                            if let Ok(cmd) = serde_json::from_str::<Command>(command) {
+                                // parse id
+                                match cmd.command_id {
+                                    // if under 20 (no account/context)
+                                    0..=19 => run_json(command, cmd),
+                                    // if 20 -> the open account function
+                                    20 => {
+                                        if account.is_some() {
+                                            // make sure active account is NOT set - if set we would theoretically need to close it first.
+                                            serde_json::to_string(&ErrorInstance {
+                                                kind: ErrorType::Generic,
+                                                message: "This connection has already a context, you can not login twice!"
+                                                    .to_owned(),
+                                                invocation_id: cmd.invocation_id,
+                                            })
+                                            .unwrap()
+                                        } else {
+                                            // handle command and load account (set active account)
+                                            account = Some(open_account());
+                                            serde_json::to_string(&SuccessResponse {
+                                                success: true,
+                                                invocation_id: cmd.invocation_id,
+                                            })
+                                            .unwrap()
+                                        }
+                                    }
+                                    // if over 20 (with account/context)
+                                    _ => {
+                                        // make sure active account is set
+                                        if let Some(ac) = &account {
+                                            ac.0.run_json(command, cmd)
+                                        } else {
+                                            serde_json::to_string(&ErrorInstance {
+                                                kind: ErrorType::NoContext,
+                                                message: "This connection doesn't have a context set: you need to login first"
+                                                    .to_owned(),
+                                                invocation_id: cmd.invocation_id,
+                                            })
+                                            .unwrap()
+                                        }
+                                    }
+                                }
+                            } else {
+                                serde_json::to_string(&ErrorInstance {
+                                    kind: ErrorType::CommandIdMissing,
+                                    message: "You need to specify a commandId and an invocation id"
+                                        .to_owned(),
+                                    invocation_id: 0,
+                                })
+                                .unwrap()
+                            }
+                        };
+                        let answer = Text(result);
+                        websocket.write_message(answer).unwrap();
+                    }
+                } else {
+                    println!("{:?}", read_msg);
+                    break;
                 }
             }
+
+            println!("cleanup the closed connection");
+
+            // close open account db
+            // if let Some(ac) = &account {
+            //     ac.1();
+            // };
         });
     }
-
-    println!("stopping threads");
-    *running.write().unwrap() = false;
-    deltachat::job::interrupt_inbox_idle(&ctx);
-    deltachat::job::interrupt_smtp_idle(&ctx);
-
-    println!("joining");
-    _t1.join().unwrap();
-    _t2.join().unwrap();
-
-    println!("closing");
 }

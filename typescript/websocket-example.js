@@ -18,9 +18,10 @@ global.dc = dc;
 setInterval(() => {}, 100000);
 
 async function logEvents() {
+  let context = dc.context;
   /** @type {string} */
   let ev;
-  while ((ev = await dc._get_next_event_as_string())) {
+  while ((ev = await context._get_next_event_as_string())) {
     if (ev.includes("Info")) {
       console.info(ev);
     } else if (ev.includes("Warning")) {
@@ -35,3 +36,8 @@ async function logEvents() {
 }
 
 global.logEvents = logEvents;
+
+Promise.prototype.log = function () {
+  this.then(console.log).catch(console.error);
+  return this;
+};

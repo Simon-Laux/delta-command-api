@@ -11,49 +11,36 @@ pub struct Account {
 }
 
 impl Account {
-    pub fn run_json(&self, command: &str) -> String {
-        return {
-            if let Ok(cmd) = serde_json::from_str::<Command>(command) {
-                macro_rules! command {
-                    ($cmdFunction: expr) => {{
-                        let result =
-                            serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
-                        if let Ok(args) = result {
-                            serde_json::to_string(&$cmdFunction(args, cmd.invocation_id, &self))
-                                .unwrap()
-                        } else {
-                            serde_json::to_string(&ErrorInstance {
-                                kind: ErrorType::CommandParseFailure,
-                                message: format!("command arguments invalid: {:?}", result.err()),
-                                invocation_id: cmd.invocation_id,
-                            })
-                            .unwrap()
-                        }
-                    }};
-                }
-                match cmd.command_id {
-                    0 => command!(info),
-                    5 => command!(get_next_event_as_string),
-                    _ => serde_json::to_string(&ErrorInstance {
-                        kind: ErrorType::CommandNotFound,
-                        message: format!("command with the id {} not found", cmd.command_id),
+    pub fn run_json(&self, command: &str, cmd: Command) -> String {
+        macro_rules! command {
+            ($cmdFunction: expr) => {{
+                let result = serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
+                if let Ok(args) = result {
+                    serde_json::to_string(&$cmdFunction(args, cmd.invocation_id, &self)).unwrap()
+                } else {
+                    serde_json::to_string(&ErrorInstance {
+                        kind: ErrorType::CommandParseFailure,
+                        message: format!("command arguments invalid: {:?}", result.err()),
                         invocation_id: cmd.invocation_id,
                     })
-                    .unwrap(),
+                    .unwrap()
                 }
-            } else {
-                serde_json::to_string(&ErrorInstance {
-                    kind: ErrorType::CommandIdMissing,
-                    message: "You need to specify a commandId".to_owned(),
-                    invocation_id: 0,
-                })
-                .unwrap()
-            }
-        };
+            }};
+        }
+        match cmd.command_id {
+            21 => command!(info),
+            22 => command!(get_next_event_as_string),
+            _ => serde_json::to_string(&ErrorInstance {
+                kind: ErrorType::CommandNotFound,
+                message: format!("command with the id {} not found", cmd.command_id),
+                invocation_id: cmd.invocation_id,
+            })
+            .unwrap(),
+        }
     }
 }
 api_function2!(
-    fn info() -> std::collections::HashMap<&'static str, std::string::String> {
+    fn info() -> HashMap<&'static str, std::string::String> {
         account.ctx.get_info()
     }
 );
@@ -69,63 +56,63 @@ api_function2!(
 );
 
 #[derive(Deserialize, Debug)]
-struct Command {
-    command_id: u32,
-    invocation_id: u32,
+pub struct Command {
+    pub command_id: u32,
+    pub invocation_id: u32,
 }
 
 #[derive(Serialize, Debug)]
-struct ErrorInstance {
-    kind: ErrorType,
-    message: String,
-    invocation_id: u32,
+pub struct ErrorInstance {
+    pub kind: ErrorType,
+    pub message: String,
+    pub invocation_id: u32,
 }
 
 #[derive(Serialize, Debug)]
-enum ErrorType {
+pub enum ErrorType {
     CommandIdMissing,
     CommandNotFound,
+    CommandNotImplementedYet,
     CommandParseFailure,
+    NoContext,
+    /** the command threw an Error */
+    Generic,
 }
 
-pub fn run_json(command: &str) -> String {
-    return {
-        if let Ok(cmd) = serde_json::from_str::<Command>(command) {
-            macro_rules! command {
-                ($cmdFunction: expr) => {{
-                    let result = serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
-                    if let Ok(args) = result {
-                        serde_json::to_string(&$cmdFunction(args, cmd.invocation_id)).unwrap()
-                    } else {
-                        serde_json::to_string(&ErrorInstance {
-                            kind: ErrorType::CommandParseFailure,
-                            message: format!("command arguments invalid: {:?}", result.err()),
-                            invocation_id: cmd.invocation_id,
-                        })
-                        .unwrap()
-                    }
-                }};
-            }
-            match cmd.command_id {
-                1 => command!(echo),
-                2 => command!(add),
-                3 => command!(subtract),
-                _ => serde_json::to_string(&ErrorInstance {
-                    kind: ErrorType::CommandNotFound,
-                    message: format!("command with the id {} not found", cmd.command_id),
+#[derive(Serialize, Debug)]
+pub struct SuccessResponse {
+    /** this is always true */
+    pub success: bool,
+    pub invocation_id: u32,
+}
+
+pub fn run_json(command: &str, cmd: Command) -> String {
+    macro_rules! command {
+        ($cmdFunction: expr) => {{
+            let result = serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
+            if let Ok(args) = result {
+                serde_json::to_string(&$cmdFunction(args, cmd.invocation_id)).unwrap()
+            } else {
+                serde_json::to_string(&ErrorInstance {
+                    kind: ErrorType::CommandParseFailure,
+                    message: format!("command arguments invalid: {:?}", result.err()),
                     invocation_id: cmd.invocation_id,
                 })
-                .unwrap(),
+                .unwrap()
             }
-        } else {
-            serde_json::to_string(&ErrorInstance {
-                kind: ErrorType::CommandIdMissing,
-                message: "You need to specify a commandId".to_owned(),
-                invocation_id: 0,
-            })
-            .unwrap()
-        }
-    };
+        }};
+    }
+    match cmd.command_id {
+        1 => command!(echo),
+        2 => command!(add),
+        3 => command!(subtract),
+        _ => serde_json::to_string(&ErrorInstance {
+            kind: ErrorType::CommandNotFound,
+            message: format!("command with the id {} not found", cmd.command_id),
+            invocation_id: cmd.invocation_id,
+        })
+        .unwrap(),
+    }
 }
 
 api_function!(
@@ -152,24 +139,22 @@ mod tests {
     #[test]
     fn echo() {
         assert_eq!(
-            run_json("{ \"command_id\": 1, \"message\": \"Hello Echo\"}"),
-            "{\"message\":\"Hello Echo\"}"
+            run_json(
+                "{ \"command_id\": 1, \"message\": \"Hello Echo\", \"invocation_id\": 476}",
+                Command {
+                    command_id: 1,
+                    invocation_id: 476
+                }
+            ),
+            "{\"result\":\"Hello Echo\",\"invocation_id\":476}"
         );
     }
 
     #[test]
     fn errors() {
         assert_eq!(
-            run_json("{}"),
-            "{\"kind\":\"CommandIdMissing\",\"message\":\"You need to specify a commandId\"}"
-        );
-        assert_eq!(
-            run_json("{ \"command_id\": 0}"),
-            "{\"kind\":\"CommandNotFound\",\"message\":\"command with the id 2 not found\"}"
-        );
-        assert_eq!(
-            run_json("{ \"command_id\": 1}"),
-            "{\"kind\":\"CommandParseFailure\",\"message\":\"command arguments invalid: Some(Error(\\\"missing field `message`\\\", line: 1, column: 18))\"}"
+            run_json("{ \"command_id\": 1, \"invocation_id\": 0}", Command { command_id: 1, invocation_id: 0}),
+            "{\"kind\":\"CommandParseFailure\",\"message\":\"command arguments invalid: Some(Error(\\\"missing field `message`\\\", line: 1, column: 38))\",\"invocation_id\":0}"
         );
     }
 }
