@@ -52,4 +52,19 @@ export class Context {
   async _trigger_error(): Promise<boolean> {
     return this.transport.send(500, {});
   }
+
+  async getChatListIds(
+    listFlags: number,
+    options?: {
+      /** search word for searching */
+      query?: string;
+      queryContactId?: number;
+    }
+  ): Promise<number[]> {
+    return this.transport.send(40, {
+      listflags: listFlags,
+      query: options.query,
+      query_contact_id: options.queryContactId
+    });
+  }
 }

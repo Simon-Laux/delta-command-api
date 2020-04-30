@@ -2,6 +2,7 @@ use deltachat_command_derive::{api_function, api_function2, get_args_struct};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use deltachat::chatlist::Chatlist;
 use deltachat::context::Context;
 use deltachat::Event;
 
@@ -68,6 +69,7 @@ impl Account {
         match cmd.command_id {
             21 => command!(info),
             22 => command!(get_next_event_as_string),
+            40 => command!(get_chat_list_ids),
             500 => command!(trigger_error),
             _ => result_to_string::<()>(
                 Err(ErrorInstance {
@@ -105,6 +107,28 @@ api_function2!(
     }
 );
 
+api_function2!(
+    fn get_chat_list_ids<'t>(
+        listflags: usize,
+        query: Option<&'t str>,
+        query_contact_id: Option<u32>,
+    ) -> Result<Vec<u32>, ErrorInstance> {
+        match Chatlist::try_load(&account.ctx, listflags, query, query_contact_id) {
+            Ok(list) => {
+                let mut l: Vec<u32> = Vec::new();
+                for i in 0..list.len() {
+                    l.push(list.get_chat_id(i).to_u32());
+                }
+                Ok(l)
+            }
+            Err(err) => Err(ErrorInstance {
+                kind: ErrorType::DeltaChatError,
+                message: format!("{:?}", err),
+            }),
+        }
+    }
+);
+
 #[derive(Deserialize, Debug)]
 pub struct Command {
     pub command_id: u32,
@@ -125,6 +149,7 @@ pub enum ErrorType {
     NoContext,
     /** the command threw an Error */
     Generic,
+    DeltaChatError,
 }
 
 #[derive(Serialize, Debug)]
