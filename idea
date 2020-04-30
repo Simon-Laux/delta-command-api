@@ -17,11 +17,29 @@ Thoughts:
 - When creating a context on each connection, what do we do when the connection is lost?
 should we add an session protocol?
 
-TODO:
-- add events
-- connect deltachat
 
+Improvements:
 - make async
+- modify functions ans api so that functions can throw errors, use Result?
 
-
+TODO:
+- add events (-> get next event api)
 - we need a modified deltachat core that is able to serialize Events
+
+- connect deltachat (in progress)
+
+
+- add prettier to ts project
+
+- make an api for configuring a new account so that you can actually login (online)
+
+- serve blob directory (api to get a token that is the path on the http server)
+
+Implement
+- [ ] get chatList
+- [ ] get chatListItem
+- [ ] get Full Chat Info
+- [ ] get messages for chat
+- [ ] get message by Id
+- [ ] send Message
+- [ ] send file/audio/image / set profile image / set group image -> somekind of http upload to core feature.
