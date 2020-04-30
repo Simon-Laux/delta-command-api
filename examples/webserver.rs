@@ -145,7 +145,7 @@ fn main() {
                                     20 => {
                                         if account.is_some() {
                                             // make sure active account is NOT set - if set we would theoretically need to close it first.
-                                            serde_json::to_string(&ErrorInstance {
+                                            serde_json::to_string(&ErrorResponse {
                                                 kind: ErrorType::Generic,
                                                 message:
                                                     "This connection has already a context opened"
@@ -169,7 +169,7 @@ fn main() {
                                         if let Some(ac) = &account {
                                             ac.0.run_json(command, cmd)
                                         } else {
-                                            serde_json::to_string(&ErrorInstance {
+                                            serde_json::to_string(&ErrorResponse {
                                                 kind: ErrorType::NoContext,
                                                 message: "This connection doesn't have a context set: you need to login first"
                                                     .to_owned(),
@@ -180,7 +180,7 @@ fn main() {
                                     }
                                 }
                             } else {
-                                serde_json::to_string(&ErrorInstance {
+                                serde_json::to_string(&ErrorResponse {
                                     kind: ErrorType::CommandIdMissing,
                                     message: "You need to specify a commandId and an invocation id"
                                         .to_owned(),

@@ -96,7 +96,6 @@ pub fn api_function2(input: TokenStream) -> TokenStream {
 
     let fn_inputs = &ast.sig.inputs;
     let arguments_ident = Ident::new(&format!("cmd_{}_args", fn_name), Span::call_site());
-    let result_ident = Ident::new(&format!("cmd_{}_res", fn_name), Span::call_site());
     let fn_output = &ast.sig.output;
     let fn_block = &ast.block;
 
@@ -123,20 +122,9 @@ pub fn api_function2(input: TokenStream) -> TokenStream {
         .into_iter()
         .collect::<proc_macro2::TokenStream>();
 
-    let result_struct = match fn_output {
-        syn::ReturnType::Default => quote! {
-            struct #result_ident #fn_generics{
-                invocation_id: u32,
-            }
-        },
-        syn::ReturnType::Type(_, type_box) => {
-            quote! {
-                struct #result_ident #fn_generics{
-                    result: #type_box,
-                    invocation_id: u32,
-                }
-            }
-        }
+    let return_type = match fn_output {
+        syn::ReturnType::Default => panic!("You need to return a Result"),
+        syn::ReturnType::Type(_, type_box) => type_box,
     };
 
     let result = quote! {
@@ -144,17 +132,10 @@ pub fn api_function2(input: TokenStream) -> TokenStream {
         struct #arguments_ident #fn_generics{
             #fn_inputs
         }
-        #[derive(Serialize, Debug)]
-        #result_struct
 
-        fn #fn_name(args: #arguments_ident, invocation_id: u32, account: &Account) -> #result_ident {
-            #result_ident {
-                result: {
-                    #argument_assigning
-                    #fn_block
-                },
-                invocation_id: invocation_id,
-            }
+        fn #fn_name(args: #arguments_ident, account: &Account) -> #return_type {
+            #argument_assigning
+            #fn_block
         }
     };
 

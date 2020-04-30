@@ -47,4 +47,9 @@ export class Context {
   async _get_next_event_as_string(): Promise<string> {
     return this.transport.send(22, {});
   }
+
+  /** triggers an error to test error behaviour */
+  async _trigger_error(): Promise<boolean> {
+    return this.transport.send(500, {});
+  }
 }

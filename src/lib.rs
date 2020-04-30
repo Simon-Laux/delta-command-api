@@ -10,48 +10,98 @@ pub struct Account {
     pub event_queu: std::sync::Arc<std::sync::RwLock<Vec<Event>>>,
 }
 
+#[derive(Serialize, Debug)]
+struct Response<T> {
+    result: T,
+    invocation_id: u32,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ErrorResponse {
+    pub kind: ErrorType,
+    pub message: String,
+    pub invocation_id: u32,
+}
+
+fn result_to_string<T: ?Sized>(result: Result<T, ErrorInstance>, invocation_id: u32) -> String
+where
+    T: Serialize,
+    T: std::marker::Sized,
+{
+    match result {
+        Err(e) => serde_json::to_string(&ErrorResponse {
+            kind: e.kind,
+            message: e.message,
+            invocation_id: invocation_id,
+        })
+        .unwrap(),
+        Ok(r) => serde_json::to_string(&Response {
+            result: r,
+            invocation_id: invocation_id,
+        })
+        .unwrap(),
+    }
+}
+
 impl Account {
     pub fn run_json(&self, command: &str, cmd: Command) -> String {
         macro_rules! command {
-            ($cmdFunction: expr) => {{
-                let result = serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
-                if let Ok(args) = result {
-                    serde_json::to_string(&$cmdFunction(args, cmd.invocation_id, &self)).unwrap()
-                } else {
-                    serde_json::to_string(&ErrorInstance {
-                        kind: ErrorType::CommandParseFailure,
-                        message: format!("command arguments invalid: {:?}", result.err()),
-                        invocation_id: cmd.invocation_id,
-                    })
-                    .unwrap()
-                }
-            }};
-        }
+            ($cmdFunction: expr) => {
+                result_to_string(
+                    {
+                        let result =
+                            serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
+                        if let Ok(args) = result {
+                            $cmdFunction(args, &self)
+                        } else {
+                            Err(ErrorInstance {
+                                kind: ErrorType::CommandParseFailure,
+                                message: format!("command arguments invalid: {:?}", result.err()),
+                            })
+                        }
+                    },
+                    cmd.invocation_id,
+                )
+            };
+        };
+
         match cmd.command_id {
             21 => command!(info),
             22 => command!(get_next_event_as_string),
-            _ => serde_json::to_string(&ErrorInstance {
-                kind: ErrorType::CommandNotFound,
-                message: format!("command with the id {} not found", cmd.command_id),
-                invocation_id: cmd.invocation_id,
-            })
-            .unwrap(),
+            500 => command!(trigger_error),
+            _ => result_to_string::<()>(
+                Err(ErrorInstance {
+                    kind: ErrorType::CommandNotFound,
+                    message: format!("command with the id {} not found", cmd.command_id),
+                }),
+                cmd.invocation_id,
+            ),
         }
     }
 }
 api_function2!(
-    fn info() -> HashMap<&'static str, std::string::String> {
-        account.ctx.get_info()
+    fn info() -> Result<HashMap<&'static str, std::string::String>, ErrorInstance> {
+        Ok(account.ctx.get_info())
     }
 );
+
 api_function2!(
-    fn get_next_event_as_string() -> Option<String> {
+    fn get_next_event_as_string() -> Result<Option<String>, ErrorInstance> {
         let mut event_queu = account.event_queu.write().unwrap();
         if event_queu.len() > 0 {
-            Some(format!("{:?}", event_queu.remove(0)))
+            Ok(Some(format!("{:?}", event_queu.remove(0))))
         } else {
-            None
+            Ok(None)
         }
+    }
+);
+
+api_function2!(
+    fn trigger_error() -> Result<bool, ErrorInstance> {
+        Err(ErrorInstance {
+            kind: ErrorType::Generic,
+            message: "This function is meant to test the error behaviour".to_owned(),
+        })
     }
 );
 
@@ -61,11 +111,9 @@ pub struct Command {
     pub invocation_id: u32,
 }
 
-#[derive(Serialize, Debug)]
 pub struct ErrorInstance {
     pub kind: ErrorType,
     pub message: String,
-    pub invocation_id: u32,
 }
 
 #[derive(Serialize, Debug)]
@@ -93,7 +141,7 @@ pub fn run_json(command: &str, cmd: Command) -> String {
             if let Ok(args) = result {
                 serde_json::to_string(&$cmdFunction(args, cmd.invocation_id)).unwrap()
             } else {
-                serde_json::to_string(&ErrorInstance {
+                serde_json::to_string(&ErrorResponse {
                     kind: ErrorType::CommandParseFailure,
                     message: format!("command arguments invalid: {:?}", result.err()),
                     invocation_id: cmd.invocation_id,
@@ -106,7 +154,7 @@ pub fn run_json(command: &str, cmd: Command) -> String {
         1 => command!(echo),
         2 => command!(add),
         3 => command!(subtract),
-        _ => serde_json::to_string(&ErrorInstance {
+        _ => serde_json::to_string(&ErrorResponse {
             kind: ErrorType::CommandNotFound,
             message: format!("command with the id {} not found", cmd.command_id),
             invocation_id: cmd.invocation_id,

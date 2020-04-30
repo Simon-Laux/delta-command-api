@@ -44,9 +44,49 @@ Response:
 input:
 
 ```rust
+api_function!(
+    fn add(a: u32, b: u32) -> u32 {
+        a + b
+    }
+);
+```
+
+output:
+
+```rust
+#[derive(Deserialize, Debug)]
+struct cmd_add_args {
+    a: u32,
+    b: u32,
+}
+#[derive(Serialize, Debug)]
+struct cmd_add_res{
+    result: u32,
+    invocation_id: u32,
+}
+
+fn add(args: cmd_info_args, invocation_id: u32) -> cmd_add_res {
+    cmd_add_res {
+        result: {
+            let a = args.a;
+            let b = args.a;
+            a + b
+        },
+        invocation_id: invocation_id,
+    }
+}
+```
+
+#### What does the api_function2! macro generate?
+
+Similar to `api_function!` but provides access to a deltachat-context and works with results to express errors.
+
+input:
+
+```rust
 api_function2!(
-    fn info(_sample_input:bool) -> HashMap<&'static str, std::string::String> {
-        account.ctx.get_info()
+    fn info(_sample_input:bool) -> Result<HashMap<&'static str, std::string::String>, ErrorInstance> {
+        Ok(account.ctx.get_info())
     }
 );
 ```
@@ -58,20 +98,10 @@ output:
 struct cmd_info_args {
     _sample_input:bool
 }
-#[derive(Serialize, Debug)]
-struct cmd_info_res{
-    result: HashMap<&'static str, std::string::String>,
-    invocation_id: u32,
-}
 
-fn info(args: cmd_info_args, invocation_id: u32, account: &Account) -> cmd_info_res {
-    cmd_info_res {
-        result: {
-            let _sample_input = args._sample_input;
-            account.ctx.get_info()
-        },
-        invocation_id: invocation_id,
-    }
+fn info(args: cmd_info_args, account: &Account) -> Result<HashMap<&'static str, std::string::String>, ErrorInstance> {
+    let _sample_input = args._sample_input;
+    account.ctx.get_info()
 }
 ```
 
