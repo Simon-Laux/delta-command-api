@@ -20,7 +20,6 @@ should we add an session protocol?
 
 Improvements:
 - make async
-- modify functions ans api so that functions can throw errors, use Result?
 
 TODO:
 - add events (-> get next event api)
