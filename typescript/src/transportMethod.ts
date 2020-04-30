@@ -19,7 +19,7 @@ export class WebsocketTransport implements TransportMethod {
     return new Promise((res, rej) => {
       this.socket = new WebSocket(this.address);
 
-      this.socket.addEventListener("message", (event) => {
+      this.socket.addEventListener("message", event => {
         // handle answer
         const answer = JSON.parse(event.data);
         // console.log("got", answer)
@@ -39,22 +39,22 @@ export class WebsocketTransport implements TransportMethod {
         if (answer.kind && answer.message) {
           callback.rej(new Error(`${answer.kind}:${answer.message}`));
         } else {
-          callback.res(answer.result);
+          callback.res(answer.result || null);
         }
 
         this.callbacks[answer.invocation_id] = null;
       });
-      this.socket.addEventListener("error", (event) => {
+      this.socket.addEventListener("error", event => {
         console.error(event);
         // todo handle error
         this.online = false;
         rej();
       });
-      this.socket.addEventListener("close", (event) => {
+      this.socket.addEventListener("close", event => {
         console.debug("socket is closed now");
         this.online = false;
       });
-      this.socket.addEventListener("open", (event) => {
+      this.socket.addEventListener("open", event => {
         console.debug("socket is open now");
         this.initialized = true;
         this.online = true;
@@ -63,7 +63,10 @@ export class WebsocketTransport implements TransportMethod {
     });
   }
 
-  send(commandId: number, parameters: { [key: string]: any }): any {
+  send(
+    commandId: number,
+    parameters: { [key: string]: any }
+  ): Promise<any | null> {
     if (!this.initialized) throw new Error("Socket wasn't initilized yet");
     if (!this.online) throw new Error("Not online");
 
@@ -76,7 +79,7 @@ export class WebsocketTransport implements TransportMethod {
     let data = {
       ...parameters,
       command_id: commandId,
-      invocation_id: this.callbacks.push(callback),
+      invocation_id: this.callbacks.push(callback)
     };
     // console.log("sending:", data)
     this.socket.send(this.format.encode(data));
@@ -88,6 +91,6 @@ export class WebsocketTransport implements TransportMethod {
   }
 
   _currentUnresolvedCallCount() {
-    return this.callbacks.filter((cb) => cb !== null).length;
+    return this.callbacks.filter(cb => cb !== null).length;
   }
 }
