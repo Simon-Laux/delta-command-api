@@ -9,7 +9,7 @@ export class DeltaChat {
   }
 
   /** sets the currently active account of the connection */
-  async login(/*TODO*/) {
+  async openContext() {
     await this.transport.send(20, {});
     this._context = new Context(this.transport);
     return this._context;
@@ -33,10 +33,17 @@ export class DeltaChat {
 export class Context {
   constructor(public transport: TransportMethod) {}
 
-  async getInfo() {
+  /** Login to an email account */
+  async configure(/* TODO */) {
+    throw new Error("Not implemented yet");
+  }
+
+  /** get information abeout deltachat core and the current context */
+  async getInfo(): Promise<{ [key: string]: string }> {
     return this.transport.send(21, {});
   }
 
+  /** get the next event as string */
   async _get_next_event_as_string(): Promise<string> {
     return this.transport.send(22, {});
   }

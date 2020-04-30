@@ -141,14 +141,15 @@ fn main() {
                                 match cmd.command_id {
                                     // if under 20 (no account/context)
                                     0..=19 => run_json(command, cmd),
-                                    // if 20 -> the open account function
+                                    // if 20 -> the open context function
                                     20 => {
                                         if account.is_some() {
                                             // make sure active account is NOT set - if set we would theoretically need to close it first.
                                             serde_json::to_string(&ErrorInstance {
                                                 kind: ErrorType::Generic,
-                                                message: "This connection has already a context, you can not login twice!"
-                                                    .to_owned(),
+                                                message:
+                                                    "This connection has already a context opened"
+                                                        .to_owned(),
                                                 invocation_id: cmd.invocation_id,
                                             })
                                             .unwrap()
