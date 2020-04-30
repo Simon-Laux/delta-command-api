@@ -89,6 +89,59 @@ pub fn api_function(input: TokenStream) -> TokenStream {
     TokenStream::from(result)
 }
 
+#[proc_macro]
+pub fn api_function2(input: TokenStream) -> TokenStream {
+    let ast: syn::ItemFn = syn::parse(input).unwrap();
+    let fn_name = &ast.sig.ident;
+
+    let fn_inputs = &ast.sig.inputs;
+    let arguments_ident = Ident::new(&format!("cmd_{}_args", fn_name), Span::call_site());
+    let fn_output = &ast.sig.output;
+    let fn_block = &ast.block;
+
+    let fn_generics = &ast.sig.generics; // the lifetimes
+
+    let mut argument_idents: Vec<proc_macro2::TokenStream> = Vec::new();
+
+    for input in fn_inputs {
+        match input {
+            syn::FnArg::Typed(pat_type) => match &*pat_type.pat {
+                syn::Pat::Ident(p) => {
+                    let ident = p.ident.clone();
+                    argument_idents.push(quote! {
+                        let #ident = args.#ident;
+                    })
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    let argument_assigning = argument_idents
+        .into_iter()
+        .collect::<proc_macro2::TokenStream>();
+
+    let return_type = match fn_output {
+        syn::ReturnType::Default => panic!("You need to return a Result"),
+        syn::ReturnType::Type(_, type_box) => type_box,
+    };
+
+    let result = quote! {
+        #[derive(Deserialize, Debug)]
+        struct #arguments_ident #fn_generics{
+            #fn_inputs
+        }
+
+        fn #fn_name(args: #arguments_ident, account: &Account) -> #return_type {
+            #argument_assigning
+            #fn_block
+        }
+    };
+
+    TokenStream::from(result)
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
