@@ -27,9 +27,6 @@ TODO:
 
 - connect deltachat (in progress)
 
-
-- add prettier to ts project
-
 - make an api for configuring a new account so that you can actually login (online)
 
 - serve blob directory (api to get a token that is the path on the http server)
