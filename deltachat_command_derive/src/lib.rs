@@ -129,11 +129,11 @@ pub fn api_function2(input: TokenStream) -> TokenStream {
 
     let result = quote! {
         #[derive(Deserialize, Debug)]
-        struct #arguments_ident #fn_generics{
+        pub(crate) struct #arguments_ident #fn_generics{
             #fn_inputs
         }
 
-        fn #fn_name(args: #arguments_ident, account: &Account) -> #return_type {
+        pub(crate) fn #fn_name(args: #arguments_ident, account: &Account) -> #return_type {
             #argument_assigning
             #fn_block
         }

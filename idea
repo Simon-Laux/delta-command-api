@@ -36,9 +36,13 @@ TODO:
 
 Implement
 - [X] get chatList chat ids
-- [ ] get chatListItem
+- [WIP] get chatListItem
 - [ ] get Full Chat Info
 - [ ] get messages for chat
 - [ ] get message by Id
 - [ ] send Message
+- [ ] create Chat
+- [ ] get Contact
+- [ ] create Contact
+- [ ] Tests ("e2e" written in javascript)
 - [ ] send file/audio/image / set profile image / set group image -> somekind of http upload to core feature.

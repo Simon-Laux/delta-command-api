@@ -1,4 +1,5 @@
 import { TransportMethod } from "./transportMethod";
+import { ChatList } from "./deltachat/chatList";
 
 export class DeltaChat {
   private _context: Context | null;
@@ -31,6 +32,8 @@ export class DeltaChat {
 }
 
 export class Context {
+  readonly chatList = new ChatList(this.transport);
+
   constructor(public transport: TransportMethod) {}
 
   /** Login to an email account */
@@ -51,20 +54,5 @@ export class Context {
   /** triggers an error to test error behaviour */
   async _trigger_error(): Promise<boolean> {
     return this.transport.send(500, {});
-  }
-
-  async getChatListIds(
-    listFlags: number,
-    options?: {
-      /** search word for searching */
-      query?: string;
-      queryContactId?: number;
-    }
-  ): Promise<number[]> {
-    return this.transport.send(40, {
-      listflags: listFlags,
-      query: options.query,
-      query_contact_id: options.queryContactId
-    });
   }
 }
