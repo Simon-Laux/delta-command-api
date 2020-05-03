@@ -35,7 +35,7 @@ Implement
 - [X] get chatList chat ids
 - [WIP] get chatListItem
 - [ ] get Full Chat Info
-- [ ] get messages for chat
+- [X] get message ids for chat
 - [ ] get message by Id
 - [ ] send Message
 - [ ] create Chat

@@ -8,6 +8,9 @@ use deltachat::Event;
 mod chatlistitem;
 use chatlistitem::*;
 
+mod message;
+use message::*;
+
 pub struct Account {
     pub ctx: std::sync::Arc<Context>,
     pub event_queu: std::sync::Arc<std::sync::RwLock<Vec<Event>>>,
@@ -73,6 +76,7 @@ impl Account {
             22 => command!(get_next_event_as_string),
             40 => command!(get_chat_list_ids),
             41 => command!(get_chat_list_items_by_ids),
+            45 => command!(get_chat_message_ids),
             500 => command!(trigger_error),
             _ => result_to_string::<()>(
                 Err(ErrorInstance {

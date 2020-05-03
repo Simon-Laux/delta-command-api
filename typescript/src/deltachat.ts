@@ -55,4 +55,8 @@ export class Context {
   async _trigger_error(): Promise<boolean> {
     return this.transport.send(500, {});
   }
+
+  async getMessageIds(chatId: number): Promise<number[]> {
+    return this.transport.send(45, { chat_id: chatId });
+  }
 }
