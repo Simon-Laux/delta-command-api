@@ -1,11 +1,14 @@
 import WebSocket from "isomorphic-ws";
 
 export interface TransportMethod {
+  initialized: boolean;
+  online: boolean;
   send(commandId: number, parameters: { [key: string]: any }): Promise<any>;
 }
 
 export class WebsocketTransport implements TransportMethod {
-  callbacks: { res: Function; rej: Function }[] = [];
+  callbacks: {[invocation_id:number]: { res: Function; rej: Function }} = {};
+  invocation_id_counter = 1
   socket: WebSocket;
   initialized = false;
   online = false;
@@ -15,49 +18,56 @@ export class WebsocketTransport implements TransportMethod {
     private format: import("./transportFormat").TransportFormat
   ) {}
 
+  private onMessage(event:{
+    data: any;
+    type: string;
+    target: WebSocket;
+}){
+  // handle answer
+  const answer = JSON.parse(event.data);
+  // console.log("got", answer)
+  if (answer.invocation_id == 0) {
+    throw new Error("Command id missing error");
+  }
+  if (!answer.invocation_id) {
+    throw new Error("invocation_id missing");
+  }
+  const callback = this.callbacks[answer.invocation_id];
+  if (!callback) {
+    throw new Error(
+      `No callback found for invocation_id ${answer.invocation_id}`
+    );
+  }
+
+  if (answer.kind && answer.message) {
+    callback.rej(new Error(`${answer.kind}:${answer.message}`));
+  } else {
+    callback.res(answer.result || null);
+  }
+
+  this.callbacks[answer.invocation_id] = null;
+}
+
   setup(): Promise<void> {
     return new Promise((res, rej) => {
       this.socket = new WebSocket(this.address);
+      const self = this // socket event callback overwrites this to undefined sometimes
 
-      this.socket.addEventListener("message", event => {
-        // handle answer
-        const answer = JSON.parse(event.data);
-        // console.log("got", answer)
-        if (answer.invocation_id == 0) {
-          throw new Error("Command id missing error");
-        }
-        if (!answer.invocation_id) {
-          throw new Error("invocation_id missing");
-        }
-        const callback = this.callbacks[answer.invocation_id - 1];
-        if (!callback) {
-          throw new Error(
-            `No callback found for invocation_id ${answer.invocation_id}`
-          );
-        }
-
-        if (answer.kind && answer.message) {
-          callback.rej(new Error(`${answer.kind}:${answer.message}`));
-        } else {
-          callback.res(answer.result || null);
-        }
-
-        this.callbacks[answer.invocation_id] = null;
-      });
+      this.socket.addEventListener("message", this.onMessage.bind(self));
       this.socket.addEventListener("error", event => {
         console.error(event);
         // todo handle error
-        this.online = false;
+        self.online = false;
         rej();
       });
       this.socket.addEventListener("close", event => {
         console.debug("socket is closed now");
-        this.online = false;
+        self.online = false;
       });
       this.socket.addEventListener("open", event => {
         console.debug("socket is open now");
-        this.initialized = true;
-        this.online = true;
+        self.initialized = true;
+        self.online = true;
         res();
       });
     });
@@ -76,10 +86,12 @@ export class WebsocketTransport implements TransportMethod {
       callback = { res, rej };
     });
 
+    const invocation_id = this.invocation_id_counter++;
+    this.callbacks[invocation_id] = callback;
     let data = {
       ...parameters,
       command_id: commandId,
-      invocation_id: this.callbacks.push(callback)
+      invocation_id
     };
     // console.log("sending:", data)
     this.socket.send(this.format.encode(data));
@@ -87,10 +99,10 @@ export class WebsocketTransport implements TransportMethod {
   }
 
   _currentCallCount() {
-    return this.callbacks.length;
+    return  Object.keys(this.callbacks).length;
   }
 
   _currentUnresolvedCallCount() {
-    return this.callbacks.filter(cb => cb !== null).length;
+    return Object.keys(this.callbacks).filter(key => this.callbacks[Number(key)] !== null).length;
   }
 }

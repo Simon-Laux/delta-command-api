@@ -71,4 +71,10 @@ export class ChatList {
       chat_ids: chat_ids
     });
   }
+
+  async getFullChatById(chatId: number) {
+    return this.transport.send(46, {
+      chat_id_number: chatId
+    });
+  }
 }

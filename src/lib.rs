@@ -77,6 +77,7 @@ impl Account {
             40 => command!(get_chat_list_ids),
             41 => command!(get_chat_list_items_by_ids),
             45 => command!(get_chat_message_ids),
+            46 => command!(get_full_chat_by_id),
             500 => command!(trigger_error),
             _ => result_to_string::<()>(
                 Err(ErrorInstance {

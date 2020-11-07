@@ -167,3 +167,73 @@ api_function2!(
         Ok(result)
     }
 );
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FullChat {
+    id: u32,
+    name: String,
+    is_verified: bool,
+    profile_image: Option<String>,
+
+    archived: bool,
+    // subtitle: String, -> removed for now because this field needs to be translated
+    #[serde(rename = "type")]
+    chat_type: Chattype,
+    /** new chat but no initial message sent */
+    is_unpromoted: bool,
+    // contacts: contacts,
+    contact_ids: Vec<u32>,
+    color: String,
+    fresh_message_counter: usize,
+    is_group: bool,
+    is_deaddrop: bool,
+    is_self_talk: bool,
+    is_device_chat: bool,
+    draft: Option<String>,
+    is_self_in_group: bool,
+}
+
+api_function2!(
+    fn get_full_chat_by_id(chat_id_number: u32) -> Result<FullChat, ErrorInstance> {
+        let chat_id = ChatId::new(chat_id_number);
+        let chat_res = Chat::load_from_db(&account.ctx, chat_id);
+
+        if let Err(err) = chat_res {
+            return Err(ErrorInstance {
+                kind: ErrorType::DeltaChatError,
+                message: format!("{:?}", err),
+            });
+        }
+
+        let chat = chat_res.unwrap();
+        let visibility = chat.get_visibility();
+        let avatar_path = match chat.get_profile_image(&account.ctx) {
+            Some(path) => Some(path.to_str().unwrap_or("invalid/path").to_owned()),
+            None => None,
+        };
+        let contact_ids = get_chat_contacts(&account.ctx, chat_id);
+        let self_in_group = contact_ids.contains(&DC_CONTACT_ID_SELF);
+        Ok(FullChat {
+            id: chat_id.to_u32(),
+            name: chat.get_name().to_owned(),
+            is_verified: chat.is_verified(),
+            profile_image: avatar_path,
+            archived: visibility == ChatVisibility::Archived,
+            chat_type: chat.get_type(),
+            /** new chat but no initial message sent */
+            is_unpromoted: !chat.is_promoted(),
+            // contacts: contacts,
+            contact_ids: contact_ids,
+            color: format!("#{:x}", chat.get_color(&account.ctx)),
+            fresh_message_counter: chat_id.get_fresh_msg_cnt(&account.ctx),
+            is_group: chat.get_type() == Chattype::Group
+                || chat.get_type() == Chattype::VerifiedGroup,
+            is_deaddrop: chat_id.is_deaddrop(),
+            is_self_talk: chat.is_self_talk(),
+            is_device_chat: chat.is_device_talk(),
+            draft: None, //todo
+            is_self_in_group: self_in_group,
+        })
+    }
+);
