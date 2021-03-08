@@ -11,6 +11,9 @@ use chatlistitem::*;
 mod message;
 use message::*;
 
+mod error;
+use error::*;
+
 pub struct Account {
     pub ctx: std::sync::Arc<Context>,
     pub event_queu: std::sync::Arc<std::sync::RwLock<Vec<Event>>>,
@@ -50,7 +53,7 @@ where
 }
 
 impl Account {
-    pub fn run_json(&self, command: &str, cmd: Command) -> String {
+    pub async fn run_json(&self, command: &str, cmd: Command) -> String {
         macro_rules! command {
             ($cmdFunction: expr) => {
                 result_to_string(
@@ -58,7 +61,7 @@ impl Account {
                         let result =
                             serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
                         if let Ok(args) = result {
-                            $cmdFunction(args, &self)
+                            $cmdFunction(args, &self).await
                         } else {
                             Err(ErrorInstance {
                                 kind: ErrorType::CommandParseFailure,
@@ -90,8 +93,15 @@ impl Account {
     }
 }
 api_function2!(
-    fn info() -> Result<HashMap<&'static str, std::string::String>, ErrorInstance> {
-        Ok(account.ctx.get_info())
+    async fn info() -> Result<HashMap<&'static str, std::string::String>, ErrorInstance> {
+        let info_btreemap = account.ctx.get_info().await;
+        let mut hash_map = HashMap::new();
+        
+        for (key, value) in info_btreemap {
+            hash_map.insert(key, value);
+        }
+
+        Ok(hash_map)
     }
 );
 
@@ -119,23 +129,6 @@ api_function2!(
 pub struct Command {
     pub command_id: u32,
     pub invocation_id: u32,
-}
-
-pub struct ErrorInstance {
-    pub kind: ErrorType,
-    pub message: String,
-}
-
-#[derive(Serialize, Debug)]
-pub enum ErrorType {
-    CommandIdMissing,
-    CommandNotFound,
-    CommandNotImplementedYet,
-    CommandParseFailure,
-    NoContext,
-    /** the command threw an Error */
-    Generic,
-    DeltaChatError,
 }
 
 #[derive(Serialize, Debug)]

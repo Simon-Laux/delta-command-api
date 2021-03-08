@@ -7,15 +7,20 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-std = "1.8.0"
 serde = { version = "1.0", features = ["derive"] }
 
 # serde_json is just for the example, not required in general
 serde_json = "1.0"
-tungstenite = { version = "0.9.2", default-features = false }
+async-tungstenite = { version="0.13.0", features=["async-std-runtime"]}
 
-syn = "1.0.17" # fix version conflict
-deltachat = { git = "https://github.com/deltachat/deltachat-core-rust", rev = "3a25d6b" }
+# syn = "1.0.17" # fix version conflict
+deltachat = { git = "https://github.com/deltachat/deltachat-core-rust", rev = "04891238d4607ea98df890984a67fe374a61be00", features=["internals"] }
 deltachat_command_derive = { path = "./deltachat_command_derive" }
+anyhow = "1.0.38"
+futures = "0.3.13"
+env_logger = "0.8.3"
+log = "0.4.14"
 
 [workspace]
 members = [

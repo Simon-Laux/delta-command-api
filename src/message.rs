@@ -3,14 +3,20 @@ use crate::ErrorInstance;
 use deltachat_command_derive::api_function2;
 use serde::Deserialize;
 
-use deltachat::chat::ChatId;
+use deltachat::chat::{ChatId, ChatItem};
 
 api_function2!(
-    fn get_chat_message_ids(chat_id: u32) -> Result<Vec<u32>, ErrorInstance> {
+    async fn get_chat_message_ids(chat_id: u32) -> Result<Vec<u32>, ErrorInstance> {
         Ok(
             deltachat::chat::get_chat_msgs(&account.ctx, ChatId::new(chat_id), 0, None)
+                .await
                 .iter()
-                .map(|m| m.to_u32())
+                .map(|m| match m {
+                    ChatItem::Message { msg_id } => Some(msg_id),
+                    _ => None,
+                })
+                .filter(|m| m.is_some())
+                .map(|m| m.unwrap().to_u32())
                 .collect(),
         )
     }
