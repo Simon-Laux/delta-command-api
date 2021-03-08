@@ -5,7 +5,7 @@ cargo run --example webserver
 ```
 
 start node debugger in vscode with `F5`
-go to debug console or alternativly you can start `typescript/websocket-example.js` in your browser and use its console.
+go to debug console or alternativly you can start `typescript/websocket-example.js` in your browser and use its console. (but you might need to bundle it before)
 
 ```js
 dc.openContext().log();
