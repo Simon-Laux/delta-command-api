@@ -11,8 +11,7 @@ use super::chatlistitem::*;
 use super::message::*;
 
 pub struct Account {
-    pub ctx: Arc<Context>,
-    pub event_channel: deltachat::EventEmitter,
+    pub ctx: Context,
 }
 
 impl Account {
@@ -55,6 +54,7 @@ impl Account {
     }
 
     pub async fn open() -> Result<Account, anyhow::Error> {
+        println!("account open");
         let dbdir = current_dir().unwrap().join("deltachat-db");
         std::fs::create_dir_all(dbdir.clone())?;
         let dbfile = dbdir.join("db.sqlite");
@@ -64,25 +64,16 @@ impl Account {
             .expect("Failed to create context");
         let info = ctx.get_info().await;
         println!("info: {:#?}", info);
-        let ctx = Arc::new(ctx);
         println!("------ RUN ------");
         ctx.start_io().await;
 
-        let event_channel = ctx.get_event_emitter();
-
-        Ok(Account {
-            ctx,
-            event_channel,
-        })
+        Ok(Account { ctx })
     }
 
     pub async fn close_context(&self) {
         println!("stopping");
         self.ctx.stop_io().await;
         println!("closing");
-        while let Some(event) = self.event_channel.recv().await {
-            println!("ignoring event {:?}", event);
-        }
     }
 }
 

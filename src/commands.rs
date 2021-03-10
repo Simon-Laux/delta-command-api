@@ -15,7 +15,10 @@ pub struct ErrorResponse {
     pub invocation_id: u32,
 }
 
-pub fn result_to_string<T: ?Sized>(result: Result<T, ErrorInstance>, invocation_id: u32) -> Result<String, serde_json::Error>
+pub fn result_to_string<T: ?Sized>(
+    result: Result<T, ErrorInstance>,
+    invocation_id: u32,
+) -> Result<String, serde_json::Error>
 where
     T: Serialize,
     T: std::marker::Sized,

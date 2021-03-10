@@ -1,6 +1,5 @@
 // this example will use websocket+json
-use async_channel::{unbounded, TryRecvError};
-use async_lock::Mutex;
+use async_channel::unbounded;
 use async_lock::RwLock;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::task;
@@ -45,31 +44,44 @@ macro_rules! sendError {
 async fn handle_command(
     connection: &Arc<RwLock<Connection>>,
     text: &str,
+    sender: async_channel::Sender<async_tungstenite::tungstenite::Message>,
 ) -> Option<Result<String, serde_json::Error>> {
     if let Ok(cmd) = serde_json::from_str::<Command>(&text) {
+        debug!("cmd id {:?}", cmd);
         match cmd.command_id {
             // if under 20 (no account/context)
             0..=19 => Some(run_json(&text, cmd)),
             // if 20 -> the open context function
-            20 => match connection.read().await.account {
-                Some(_) => {
-                    // make sure active account is NOT set - if set we would theoretically need to close it first.
-                    sendError!(
-                        ErrorType::Generic,
-                        "This connection has already a context opened",
-                        cmd.invocation_id
-                    )
+            20 => {
+                let mut conn = connection.write().await;
+                match conn.account {
+                    Some(_) => {
+                        // make sure active account is NOT set - if set we would theoretically need to close it first.
+                        sendError!(
+                            ErrorType::Generic,
+                            "This connection has already a context opened",
+                            cmd.invocation_id
+                        )
+                    }
+                    None => {
+                        // handle command and load account (set active account)
+                        match conn.open_account(sender).await {
+                            Ok(_) => Some(serde_json::to_string(&SuccessResponse {
+                                success: true,
+                                invocation_id: cmd.invocation_id,
+                            })),
+                            Err(error) => {
+                                error!("Error opening account: {}", error);
+                                sendError!(
+                                    ErrorType::Generic,
+                                    format!("Error opening account: {}", error),
+                                    cmd.invocation_id
+                                )
+                            }
+                        }
+                    }
                 }
-                None => {
-                    // handle command and load account (set active account)
-                    connection.write().await.open_account().await;
-                    // todo handle errors
-                    Some(serde_json::to_string(&SuccessResponse {
-                        success: true,
-                        invocation_id: cmd.invocation_id,
-                    }))
-                }
-            },
+            }
             // if over 20 (with account/context)
             _ => {
                 // make sure active account is set
@@ -106,26 +118,9 @@ async fn handle_connection(
 
     // Echo incoming WebSocket messages and send a message periodically every second.
     let (s, r) = unbounded::<Message>();
-    let send_to_channel: Arc<Mutex<async_std::channel::Sender<Message>>> = Arc::new(Mutex::new(s));
-    let stc = send_to_channel.clone();
-    task::spawn(async move {
-        // loop {
-        //     interval.next().await;
-        //     info!("tick event");
-        //     match stc
-        //         .lock()
-        //         .await
-        //         .send(Message::Text("[event] tick".to_owned()))
-        //         .await
-        //     {
-        //         Ok(_) => {}
-        //         Err(err) => error!("Error sending event {:?}", err),
-        //     };
-        // }
-    });
+
     let mut receive_next_command = ws_receiver.next();
     let mut send_outgoing = r.recv();
-    let mut remaining_join_handles = Vec::new();
 
     let mut connection = Connection::new();
     let conn_arc: Arc<RwLock<Connection>> = Arc::new(RwLock::new(connection));
@@ -135,21 +130,19 @@ async fn handle_connection(
                 match msg {
                     Some(msg) => {
                         let msg = msg?;
-
-                        let stc = send_to_channel.clone();
                         let conn = conn_arc.clone();
-
+                        let stc = s.clone();
                         if msg.is_text() || msg.is_binary() {
-                            remaining_join_handles.push(task::spawn(async move {
+                            task::spawn(async move {
                                 match msg {
                                     Message::Text(text) => {
                                         println!(":{:?}:", text);
-                                        let answer_option = handle_command(&conn, &text).await;
+                                        let answer_option =
+                                            handle_command(&conn, &text, stc.clone()).await;
+                                        info!("answer {:?}", answer_option);
                                         if let Some(answer_result) = answer_option {
                                             match answer_result {
                                                 Ok(answer) => match stc
-                                                    .lock()
-                                                    .await
                                                     .send(Message::Text(answer))
                                                     .await
                                                 {
@@ -164,7 +157,7 @@ async fn handle_connection(
                                         warn!("Recieved unsported message kind: {:?}", msg)
                                     }
                                 };
-                            }));
+                            });
                         } else if msg.is_close() {
                             break;
                         }
@@ -184,11 +177,6 @@ async fn handle_connection(
                 send_outgoing = r.recv(); // Wait for next outgoing message.
             }
         }
-    }
-
-    for jh in remaining_join_handles {
-        // TODO: find a way to do the cleanup earlier?
-        jh.await;
     }
 
     conn_arc.write().await.cleanup().await;
@@ -219,16 +207,42 @@ fn main() {
 
 struct Connection {
     pub account: Option<Account>,
+    event_sender_task: Option<async_std::task::JoinHandle<()>>,
 }
 
 impl Connection {
     fn new() -> Connection {
-        Connection { account: None }
+        Connection {
+            account: None,
+            event_sender_task: None,
+        }
     }
 
-    async fn open_account(&mut self) -> anyhow::Result<()> {
+    async fn open_account(
+        &mut self,
+        sender: async_channel::Sender<async_tungstenite::tungstenite::Message>,
+    ) -> anyhow::Result<()> {
+        info!("open account");
         if self.account.is_none() {
-            self.account = Some(Account::open().await?);
+            let account = Account::open().await?;
+            let ctx = account.ctx.clone();
+
+            self.account = Some(account);
+            self.event_sender_task = Some(task::spawn(async move {
+                while let Some(event) = ctx.get_event_emitter().recv().await {
+                    info!("send event {:?}", event);
+                    match sender
+                        .send(Message::Text(format!(
+                            "{{\"event\":true, \"ev\":\"{:?}\"}}",
+                            event
+                        ))) //TODO real event to string conversion
+                        .await
+                    {
+                        Ok(_) => {}
+                        Err(err) => error!("Error sending event {:?}", err),
+                    };
+                }
+            }));
         }
         Ok(())
     }
