@@ -80,15 +80,14 @@ async fn _get_chat_list_items_by_id(
         .await
         .last()
     {
-        Some(ChatItem::Message { msg_id }) => Some(msg_id.clone()),
+        Some(ChatItem::Message { msg_id }) => Some(*msg_id),
         _ => None,
     };
 
     if chat_id.is_deaddrop() {
         let last_message_id = last_message_id_option
             .ok_or(genericError!("couldn't fetch last chat message on deadrop"))?;
-        let last_message =
-            deltachat::message::Message::load_from_db(&ctx, last_message_id.clone()).await?;
+        let last_message = deltachat::message::Message::load_from_db(&ctx, last_message_id).await?;
 
         let contact =
             deltachat::contact::Contact::load_from_db(&ctx, last_message.get_from_id()).await?;
@@ -124,19 +123,22 @@ async fn _get_chat_list_items_by_id(
         .await
         .contains(&DC_CONTACT_ID_SELF);
 
+    let fresh_message_counter = chat_id.get_fresh_msg_cnt(&ctx).await;
+    let color = format!("#{:x}", chat.get_color(&ctx).await);
+
     Ok(ChatListItemFetchResult::ChatListItem {
         id: chat_id.to_u32(),
         name: chat.get_name().to_owned(),
-        avatar_path: avatar_path,
-        color: format!("#{:x}", chat.get_color(&ctx).await),
-        last_updated: last_updated,
+        avatar_path,
+        color,
+        last_updated,
         summary_text1: "Name".to_owned(), // needs jikstras pr
         summary_text2: "Not Implemented".to_owned(), // needs jikstras pr
         summary_status: "unknown".to_owned(), // needs jikstras pr - and a function to transform the constant to strings? or return string enum
         // deaddrop: Option<Message object>,
         is_protected: chat.is_protected(),
         is_group: chat.get_type() == Chattype::Group,
-        fresh_message_counter: chat_id.get_fresh_msg_cnt(&ctx).await,
+        fresh_message_counter,
         is_self_talk: chat.is_self_talk(),
         is_device_talk: chat.is_device_talk(),
         is_self_in_group: self_in_group,
@@ -152,8 +154,8 @@ api_function2!(
         chat_ids: Vec<u32>,
     ) -> Result<HashMap<u32, ChatListItemFetchResult>, ErrorInstance> {
         let mut result: HashMap<u32, ChatListItemFetchResult> = HashMap::new();
-        for i in 0..chat_ids.len() {
-            let chat_id = ChatId::new(chat_ids[i]);
+        for (i, item) in chat_ids.iter().enumerate() {
+            let chat_id = ChatId::new(*item);
             result.insert(
                 i.try_into().unwrap(),
                 match _get_chat_list_items_by_id(&account.ctx, chat_id).await {
@@ -207,6 +209,10 @@ api_function2!(
         };
         let contact_ids = get_chat_contacts(&account.ctx, chat_id).await;
         let self_in_group = contact_ids.contains(&DC_CONTACT_ID_SELF);
+
+        let color = format!("#{:x}", chat.get_color(&account.ctx).await);
+        let fresh_message_counter = chat_id.get_fresh_msg_cnt(&account.ctx).await;
+
         Ok(FullChat {
             id: chat_id.to_u32(),
             name: chat.get_name().to_owned(),
@@ -217,9 +223,9 @@ api_function2!(
             /** new chat but no initial message sent */
             is_unpromoted: !chat.is_promoted(),
             // contacts: contacts,
-            contact_ids: contact_ids,
-            color: format!("#{:x}", chat.get_color(&account.ctx).await),
-            fresh_message_counter: chat_id.get_fresh_msg_cnt(&account.ctx).await,
+            contact_ids,
+            color,
+            fresh_message_counter,
             is_group: chat.get_type() == Chattype::Group,
             is_deaddrop: chat_id.is_deaddrop(),
             is_self_talk: chat.is_self_talk(),

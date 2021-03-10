@@ -3,7 +3,7 @@ use crate::error::*;
 use deltachat::context::Context;
 use deltachat::Event;
 use deltachat_command_derive::{api_function2, get_args_struct};
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 
 use super::chatlistitem::*;

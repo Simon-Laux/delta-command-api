@@ -24,12 +24,12 @@ where
         Err(e) => serde_json::to_string(&ErrorResponse {
             kind: e.kind,
             message: e.message,
-            invocation_id: invocation_id,
+            invocation_id,
         })
         .unwrap(),
         Ok(r) => serde_json::to_string(&Response {
             result: r,
-            invocation_id: invocation_id,
+            invocation_id,
         })
         .unwrap(),
     }
