@@ -33,18 +33,12 @@ async fn handle_connection(peer: SocketAddr, stream: TcpStream) -> Result<()> {
 
     // Echo incoming WebSocket messages and send a message periodically every second.
     let (s, r) = unbounded::<Message>();
-    let send_to_channel: Arc<Mutex<async_std::channel::Sender<Message>>> = Arc::new(Mutex::new(s));
-    let stc = send_to_channel.clone();
+    let stc = s.clone();
     task::spawn(async move {
         loop {
             interval.next().await;
             info!("tick event");
-            match stc
-                .lock()
-                .await
-                .send(Message::Text("[event] tick".to_owned()))
-                .await
-            {
+            match stc.send(Message::Text("[event] tick".to_owned())).await {
                 Ok(_) => {}
                 Err(err) => error!("Error sending event {:?}", err),
             };
@@ -59,13 +53,12 @@ async fn handle_connection(peer: SocketAddr, stream: TcpStream) -> Result<()> {
                 match msg {
                     Some(msg) => {
                         let msg = msg?;
-
-                        let stc = send_to_channel.clone();
+                        let stc = s.clone();
 
                         if msg.is_text() || msg.is_binary() {
                             remaining_join_handles.push(task::spawn(async move {
                                 task::sleep(Duration::from_secs(5)).await;
-                                match stc.lock().await.send(msg).await {
+                                match stc.send(msg).await {
                                     Ok(_) => {}
                                     Err(err) => error!("{:?}", err),
                                 };
