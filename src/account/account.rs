@@ -1,17 +1,18 @@
 use crate::commands::{result_to_string, Command};
 use crate::error::*;
 use deltachat::context::Context;
-use deltachat::Event;
 use deltachat_command_derive::{api_function2, get_args_struct};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::env::current_dir;
+use std::sync::Arc;
 
 use super::chatlistitem::*;
 use super::message::*;
 
 pub struct Account {
-    pub ctx: std::sync::Arc<Context>,
-    pub event_queu: std::sync::Arc<std::sync::RwLock<Vec<Event>>>,
+    pub ctx: Arc<Context>,
+    pub event_channel: deltachat::EventEmitter,
 }
 
 impl Account {
@@ -38,7 +39,6 @@ impl Account {
 
         match cmd.command_id {
             21 => command!(info),
-            22 => command!(get_next_event_as_string),
             40 => command!(get_chat_list_ids),
             41 => command!(get_chat_list_items_by_ids),
             45 => command!(get_chat_message_ids),
@@ -53,6 +53,37 @@ impl Account {
             ),
         }
     }
+
+    pub async fn open() -> Result<Account, anyhow::Error> {
+        let dbdir = current_dir().unwrap().join("deltachat-db");
+        std::fs::create_dir_all(dbdir.clone())?;
+        let dbfile = dbdir.join("db.sqlite");
+        println!("creating database {:?}", dbfile);
+        let ctx = Context::new("FakeOs".into(), dbfile.into(), 0)
+            .await
+            .expect("Failed to create context");
+        let info = ctx.get_info().await;
+        println!("info: {:#?}", info);
+        let ctx = Arc::new(ctx);
+        println!("------ RUN ------");
+        ctx.start_io().await;
+
+        let event_channel = ctx.get_event_emitter();
+
+        Ok(Account {
+            ctx,
+            event_channel,
+        })
+    }
+
+    pub async fn close_context(&self) {
+        println!("stopping");
+        self.ctx.stop_io().await;
+        println!("closing");
+        while let Some(event) = self.event_channel.recv().await {
+            println!("ignoring event {:?}", event);
+        }
+    }
 }
 
 api_function2!(
@@ -65,17 +96,6 @@ api_function2!(
         }
 
         Ok(hash_map)
-    }
-);
-
-api_function2!(
-    fn get_next_event_as_string() -> Result<Option<String>, ErrorInstance> {
-        let mut event_queu = account.event_queu.write().unwrap();
-        if event_queu.len() > 0 {
-            Ok(Some(format!("{:?}", event_queu.remove(0))))
-        } else {
-            Ok(None)
-        }
     }
 );
 
