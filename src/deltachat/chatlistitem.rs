@@ -1,13 +1,13 @@
-use crate::error::{ErrorInstance};
+use super::account::Account;
+use crate::error::{ErrorInstance, ErrorType};
 use crate::genericError;
-use crate::{Account, ErrorType};
 use deltachat::context::Context;
 use deltachat_command_derive::api_function2;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use deltachat::chat::{get_chat_contacts, Chat, ChatId, ChatVisibility, ChatItem};
+use deltachat::chat::{get_chat_contacts, Chat, ChatId, ChatItem, ChatVisibility};
 use deltachat::chatlist::Chatlist;
 use deltachat::constants::{Chattype, DC_CONTACT_ID_SELF};
 
@@ -76,18 +76,22 @@ async fn _get_chat_list_items_by_id(
         return Ok(ChatListItemFetchResult::ArchiveLink);
     }
 
-    let last_message_id_option = match deltachat::chat::get_chat_msgs(&ctx, chat_id, 0, None).await
-        .last() {
-            Some(ChatItem::Message{msg_id}) => Some(msg_id.clone()),
-            _ => None
-        };
+    let last_message_id_option = match deltachat::chat::get_chat_msgs(&ctx, chat_id, 0, None)
+        .await
+        .last()
+    {
+        Some(ChatItem::Message { msg_id }) => Some(msg_id.clone()),
+        _ => None,
+    };
 
     if chat_id.is_deaddrop() {
-        let last_message_id = last_message_id_option.ok_or(genericError!(
-            "couldn't fetch last chat message on deadrop"))?;
-        let last_message = deltachat::message::Message::load_from_db(&ctx, last_message_id.clone()).await?;
+        let last_message_id = last_message_id_option
+            .ok_or(genericError!("couldn't fetch last chat message on deadrop"))?;
+        let last_message =
+            deltachat::message::Message::load_from_db(&ctx, last_message_id.clone()).await?;
 
-        let contact = deltachat::contact::Contact::load_from_db(&ctx, last_message.get_from_id()).await?;
+        let contact =
+            deltachat::contact::Contact::load_from_db(&ctx, last_message.get_from_id()).await?;
 
         return Ok(ChatListItemFetchResult::DeadDrop {
             last_updated: last_message.get_timestamp() * 1000,
@@ -116,7 +120,9 @@ async fn _get_chat_list_items_by_id(
         None => None,
     };
 
-    let self_in_group = get_chat_contacts(&ctx, chat_id).await.contains(&DC_CONTACT_ID_SELF);
+    let self_in_group = get_chat_contacts(&ctx, chat_id)
+        .await
+        .contains(&DC_CONTACT_ID_SELF);
 
     Ok(ChatListItemFetchResult::ChatListItem {
         id: chat_id.to_u32(),

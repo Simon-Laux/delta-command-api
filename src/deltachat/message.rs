@@ -1,5 +1,5 @@
-use crate::Account;
-use crate::ErrorInstance;
+use super::account::Account;
+use crate::error::ErrorInstance;
 use deltachat_command_derive::api_function2;
 use serde::Deserialize;
 

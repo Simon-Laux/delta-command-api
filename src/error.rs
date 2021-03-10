@@ -1,5 +1,4 @@
-
-use serde::{Serialize};
+use serde::Serialize;
 
 #[derive(Debug)]
 pub struct ErrorInstance {
@@ -29,7 +28,7 @@ impl From<anyhow::Error> for ErrorInstance {
 }
 
 impl From<deltachat::sql::Error> for ErrorInstance {
-    fn from(err: deltachat::sql::Error) -> ErrorInstance{
+    fn from(err: deltachat::sql::Error) -> ErrorInstance {
         ErrorInstance {
             kind: ErrorType::DeltaChatError,
             message: format!("SQL error: {:?}", err),
