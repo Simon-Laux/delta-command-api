@@ -16,7 +16,7 @@ pub struct Account {
 }
 
 impl Account {
-    pub async fn run_json(&self, command: &str, cmd: Command) -> String {
+    pub async fn run_json(&self, command: &str, cmd: Command) -> Result<String, serde_json::Error> {
         macro_rules! command {
             ($cmdFunction: expr) => {
                 result_to_string(

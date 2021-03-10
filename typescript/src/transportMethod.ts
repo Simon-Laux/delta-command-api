@@ -24,7 +24,15 @@ export class WebsocketTransport implements TransportMethod {
     target: WebSocket;
 }){
   // handle answer
-  const answer = JSON.parse(event.data);
+  // console.log(event.data);
+  // return;
+  let answer;
+  try {
+    answer = JSON.parse(event.data);
+  } catch (error) {
+    console.log("message recieved is not json:", event.data, error)
+    return
+  }
   // console.log("got", answer)
   if (answer.invocation_id == 0) {
     throw new Error("Command id missing error");

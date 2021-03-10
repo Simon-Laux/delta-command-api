@@ -13,6 +13,8 @@ const dc = new DeltaChat(websocket);
 
 websocket.setup();
 
+global.ws = websocket;
+
 global.dc = dc;
 
 setInterval(() => {}, 100000);

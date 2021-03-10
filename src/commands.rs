@@ -15,24 +15,22 @@ pub struct ErrorResponse {
     pub invocation_id: u32,
 }
 
-pub fn result_to_string<T: ?Sized>(result: Result<T, ErrorInstance>, invocation_id: u32) -> String
+pub fn result_to_string<T: ?Sized>(result: Result<T, ErrorInstance>, invocation_id: u32) -> Result<String, serde_json::Error>
 where
     T: Serialize,
     T: std::marker::Sized,
 {
-    match result {
+    Ok(match result {
         Err(e) => serde_json::to_string(&ErrorResponse {
             kind: e.kind,
             message: e.message,
             invocation_id,
-        })
-        .unwrap(),
+        })?,
         Ok(r) => serde_json::to_string(&Response {
             result: r,
             invocation_id,
-        })
-        .unwrap(),
-    }
+        })?,
+    })
 }
 
 #[derive(Deserialize, Debug)]
@@ -48,23 +46,22 @@ pub struct SuccessResponse {
     pub invocation_id: u32,
 }
 
-pub fn run_json(command: &str, cmd: Command) -> String {
+pub fn run_json(command: &str, cmd: Command) -> Result<String, serde_json::Error> {
     macro_rules! command {
         ($cmdFunction: expr) => {{
             let result = serde_json::from_str::<get_args_struct!($cmdFunction)>(command);
             if let Ok(args) = result {
-                serde_json::to_string(&$cmdFunction(args, cmd.invocation_id)).unwrap()
+                serde_json::to_string(&$cmdFunction(args, cmd.invocation_id))?
             } else {
                 serde_json::to_string(&ErrorResponse {
                     kind: ErrorType::CommandParseFailure,
                     message: format!("command arguments invalid: {:?}", result.err()),
                     invocation_id: cmd.invocation_id,
-                })
-                .unwrap()
+                })?
             }
         }};
     }
-    match cmd.command_id {
+    Ok(match cmd.command_id {
         1 => command!(echo),
         2 => command!(add),
         3 => command!(subtract),
@@ -72,9 +69,8 @@ pub fn run_json(command: &str, cmd: Command) -> String {
             kind: ErrorType::CommandNotFound,
             message: format!("command with the id {} not found", cmd.command_id),
             invocation_id: cmd.invocation_id,
-        })
-        .unwrap(),
-    }
+        })?,
+    })
 }
 
 api_function!(
