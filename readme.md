@@ -9,7 +9,7 @@ go to debug console or alternativly you can start `typescript/websocket-example.
 
 ```js
 dc.openContext().log();
-logEvents();
+logInfoEvents();
 dc.context.getInfo().log();
 dc.context.chatList.getChatListIds(0).log();
 (async () =>

@@ -5,7 +5,6 @@ use deltachat_command_derive::{api_function2, get_args_struct};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env::current_dir;
-use std::sync::Arc;
 
 use super::chatlistitem::*;
 use super::message::*;

@@ -13,14 +13,12 @@ use delta_command_api::commands::Command;
 use delta_command_api::commands::ErrorResponse;
 use delta_command_api::commands::SuccessResponse;
 use delta_command_api::error::*;
+use delta_command_api::event_to_json;
 use futures::future::{select, Either};
 use futures::prelude::*;
 use log::*;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
-
-use anyhow::anyhow;
 
 async fn accept_connection(peer: SocketAddr, stream: TcpStream) {
     if let Err(e) = handle_connection(peer, stream).await {
@@ -113,17 +111,13 @@ async fn handle_connection(
     info!("New WebSocket connection: {}", peer);
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
 
-    // let's say the intervalls are events
-    let mut interval = async_std::stream::interval(Duration::from_millis(1000));
-
     // Echo incoming WebSocket messages and send a message periodically every second.
     let (s, r) = unbounded::<Message>();
 
     let mut receive_next_command = ws_receiver.next();
     let mut send_outgoing = r.recv();
 
-    let mut connection = Connection::new();
-    let conn_arc: Arc<RwLock<Connection>> = Arc::new(RwLock::new(connection));
+    let conn_arc: Arc<RwLock<Connection>> = Arc::new(RwLock::new(Connection::new()));
     loop {
         match select(receive_next_command, send_outgoing).await {
             Either::Left((msg, send_outgoing_continue)) => {
@@ -136,7 +130,7 @@ async fn handle_connection(
                             task::spawn(async move {
                                 match msg {
                                     Message::Text(text) => {
-                                        println!(":{:?}:", text);
+                                        debug!(":{:?}:", text);
                                         let answer_option =
                                             handle_command(&conn, &text, stc.clone()).await;
                                         info!("answer {:?}", answer_option);
@@ -231,11 +225,10 @@ impl Connection {
             self.event_sender_task = Some(task::spawn(async move {
                 while let Some(event) = ctx.get_event_emitter().recv().await {
                     info!("send event {:?}", event);
+                    let event_json = event_to_json(event);
+
                     match sender
-                        .send(Message::Text(format!(
-                            "{{\"event\":true, \"ev\":\"{:?}\"}}",
-                            event
-                        ))) //TODO real event to string conversion
+                        .send(Message::Text(event_json)) //TODO real event to string conversion
                         .await
                     {
                         Ok(_) => {}
@@ -249,7 +242,7 @@ impl Connection {
 
     async fn cleanup(&self) {
         if let Some(acc) = &self.account {
-            acc.close_context().await
+            acc.close_context().await;
         }
     }
 }

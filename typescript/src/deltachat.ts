@@ -1,9 +1,13 @@
 import { TransportMethod } from "./transportMethod";
 import { ChatList } from "./deltachat/chatList";
+import { DeltaEventEmitter } from "./deltachat/events";
 
-export class DeltaChat {
+export class DeltaChat extends DeltaEventEmitter {
   private _context: Context | null;
-  constructor(public transport: TransportMethod) {}
+  constructor(public transport: TransportMethod) {
+    super();
+    transport.setEventEmitter(this.emit.bind(this));
+  }
 
   get context() {
     return this._context;
