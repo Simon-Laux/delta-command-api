@@ -69,7 +69,7 @@ export class WebsocketTransport implements TransportMethod {
         console.error(event);
         // todo handle error
         self.online = false;
-        rej();
+        rej("socket error");
       });
       this.socket.addEventListener("close", event => {
         console.debug("socket is closed now");
