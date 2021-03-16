@@ -11,6 +11,11 @@ use deltachat::chat::{get_chat_contacts, Chat, ChatId, ChatItem, ChatVisibility}
 use deltachat::chatlist::Chatlist;
 use deltachat::constants::{Chattype, DC_CONTACT_ID_SELF};
 
+fn color_int_to_hex(color: u32) -> String {
+    let res = format!("{:x}", color + 0x1000000);
+    format!("#{}", &res.split_at(1).1)
+}
+
 api_function2!(
     async fn get_chat_list_ids<'t>(
         listflags: usize,
@@ -124,7 +129,7 @@ async fn _get_chat_list_items_by_id(
         .contains(&DC_CONTACT_ID_SELF);
 
     let fresh_message_counter = chat_id.get_fresh_msg_cnt(&ctx).await;
-    let color = format!("#{:x}", chat.get_color(&ctx).await);
+    let color = color_int_to_hex(chat.get_color(&ctx).await);
 
     Ok(ChatListItemFetchResult::ChatListItem {
         id: chat_id.to_u32(),
@@ -210,7 +215,7 @@ api_function2!(
         let contact_ids = get_chat_contacts(&account.ctx, chat_id).await;
         let self_in_group = contact_ids.contains(&DC_CONTACT_ID_SELF);
 
-        let color = format!("#{:x}", chat.get_color(&account.ctx).await);
+        let color = color_int_to_hex(chat.get_color(&account.ctx).await);
         let fresh_message_counter = chat_id.get_fresh_msg_cnt(&account.ctx).await;
 
         Ok(FullChat {
