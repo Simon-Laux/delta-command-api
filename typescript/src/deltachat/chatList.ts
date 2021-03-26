@@ -20,7 +20,7 @@ export type ChatListItem = {
   color: string;
   lastUpdated: number;
   freshMessageCounter: number;
-  summaryStatus: string;
+  summaryStatus: number;
   summaryText1: string;
   summaryText2: string;
   isArchived: boolean;
@@ -64,7 +64,6 @@ export type FullChat = {
   isDeaddrop: boolean;
   isSelfTalk: boolean;
   isDeviceChat: boolean;
-  draft: string | null;
   isSelfInGroup: boolean;
 };
 

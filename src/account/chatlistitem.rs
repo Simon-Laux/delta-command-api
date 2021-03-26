@@ -2,6 +2,7 @@ use super::account::Account;
 use crate::error::{ErrorInstance, ErrorType};
 use crate::genericError;
 use deltachat::context::Context;
+use deltachat::message::MsgId;
 use deltachat_command_derive::api_function2;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -10,6 +11,8 @@ use std::convert::TryInto;
 use deltachat::chat::{get_chat_contacts, Chat, ChatId, ChatItem, ChatVisibility};
 use deltachat::chatlist::Chatlist;
 use deltachat::constants::{Chattype, DC_CONTACT_ID_SELF};
+
+use num_traits::cast::ToPrimitive;
 
 fn color_int_to_hex(color: u32) -> String {
     let res = format!("{:x}", color + 0x1000000);
@@ -43,7 +46,7 @@ pub(crate) enum ChatListItemFetchResult {
         last_updated: Option<i64>,
         summary_text1: String,
         summary_text2: String,
-        summary_status: String,
+        summary_status: i64,
         is_protected: bool,
         is_group: bool,
         fresh_message_counter: usize,
@@ -89,6 +92,25 @@ async fn _get_chat_list_items_by_id(
         _ => None,
     };
 
+    let last_message_id = match last_message_id_option {
+        Some(id) => id,
+        None => MsgId::new(0),
+    };
+
+    let chat = Chat::load_from_db(&ctx, chat_id).await?;
+    let summary = Chatlist::get_summary2(&ctx, chat_id, last_message_id, Some(&chat)).await;
+
+    let summary_text1 = match summary.get_text1() {
+        Some(text) => text,
+        None => "",
+    }
+    .to_owned();
+    let summary_text2 = match summary.get_text2() {
+        Some(text) => text,
+        None => "",
+    }
+    .to_owned();
+
     if chat_id.is_deaddrop() {
         let last_message_id = last_message_id_option
             .ok_or(genericError!("couldn't fetch last chat message on deadrop"))?;
@@ -103,11 +125,10 @@ async fn _get_chat_list_items_by_id(
             sender_address: contact.get_addr().to_owned(),
             sender_contact_id: contact.get_id(),
             message_id: last_message_id.to_u32(),
-            summary_text1: "Name".to_owned(), // needs jikstras pr
-            summary_text2: "Not Implemented".to_owned(), // needs jikstras pr
+            summary_text1,
+            summary_text2,
         });
     }
-    let chat = Chat::load_from_db(&ctx, chat_id).await?;
 
     let visibility = chat.get_visibility();
 
@@ -137,10 +158,9 @@ async fn _get_chat_list_items_by_id(
         avatar_path,
         color,
         last_updated,
-        summary_text1: "Name".to_owned(), // needs jikstras pr
-        summary_text2: "Not Implemented".to_owned(), // needs jikstras pr
-        summary_status: "unknown".to_owned(), // needs jikstras pr - and a function to transform the constant to strings? or return string enum
-        // deaddrop: Option<Message object>,
+        summary_text1,
+        summary_text2,
+        summary_status: summary.get_state().to_i64().expect("impossible"), // idea and a function to transform the constant to strings? or return string enum
         is_protected: chat.is_protected(),
         is_group: chat.get_type() == Chattype::Group,
         fresh_message_counter,
@@ -198,7 +218,6 @@ pub(crate) struct FullChat {
     is_deaddrop: bool,
     is_self_talk: bool,
     is_device_chat: bool,
-    draft: Option<String>,
     is_self_in_group: bool,
 }
 
@@ -235,7 +254,6 @@ api_function2!(
             is_deaddrop: chat_id.is_deaddrop(),
             is_self_talk: chat.is_self_talk(),
             is_device_chat: chat.is_device_talk(),
-            draft: None, //todo
             is_self_in_group: self_in_group,
         })
     }

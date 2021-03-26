@@ -23,6 +23,7 @@ env_logger = "0.8.3"
 log = "0.4.14"
 async-channel = "1.6.1"
 async-lock = "2.3.0"
+num-traits = "0.2.14"
 
 [workspace]
 members = [
