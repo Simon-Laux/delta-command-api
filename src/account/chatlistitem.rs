@@ -96,16 +96,8 @@ async fn _get_chat_list_items_by_id(
     let chat = Chat::load_from_db(&ctx, chat_id).await?;
     let summary = Chatlist::get_summary2(&ctx, chat_id, last_message_id, Some(&chat)).await;
 
-    let summary_text1 = match summary.get_text1() {
-        Some(text) => text,
-        None => "",
-    }
-    .to_owned();
-    let summary_text2 = match summary.get_text2() {
-        Some(text) => text,
-        None => "",
-    }
-    .to_owned();
+    let summary_text1 = summary.get_text1().unwrap_or("").to_owned();
+    let summary_text2 = summary.get_text2().unwrap_or("").to_owned();
 
     if chat_id.is_deaddrop() {
         let last_message_id = last_message_id_option
