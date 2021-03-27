@@ -1,3 +1,4 @@
+use crate::account::chat::cmd_get_full_chat_by_id_args;
 use crate::commands::{result_to_string, Command};
 use crate::error::*;
 use deltachat::context::Context;
@@ -6,6 +7,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::env::current_dir;
 
+use super::chat::get_full_chat_by_id;
 use super::chatlistitem::*;
 use super::message::*;
 
