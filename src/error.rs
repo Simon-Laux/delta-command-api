@@ -15,13 +15,14 @@ pub enum ErrorType {
     NoContext,
     /** the command threw an Error */
     Generic,
-    DeltaChatError,
+    DeltaChatSQLError,
+    AnyhowError,
 }
 
 impl From<anyhow::Error> for ErrorInstance {
     fn from(err: anyhow::Error) -> ErrorInstance {
         ErrorInstance {
-            kind: ErrorType::DeltaChatError,
+            kind: ErrorType::AnyhowError,
             message: format!("{:?}", err),
         }
     }
@@ -30,7 +31,7 @@ impl From<anyhow::Error> for ErrorInstance {
 impl From<deltachat::sql::Error> for ErrorInstance {
     fn from(err: deltachat::sql::Error) -> ErrorInstance {
         ErrorInstance {
-            kind: ErrorType::DeltaChatError,
+            kind: ErrorType::DeltaChatSQLError,
             message: format!("SQL error: {:?}", err),
         }
     }
