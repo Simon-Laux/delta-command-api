@@ -5,13 +5,15 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "check-formatting": "prettier --check \"src/**/*.{js,ts,ts}\"",
-    "fix-formatting": "prettier --write \"src/**/*.{js,ts,ts}\""
+    "install": "npm run build",
+    "build": "npm run build:ts && npm run build:generate_iife",
+    "build:ts": "tsc",
+    "build:generate_iife": "npx esbuild --bundle dist/index.js  --target=es2015 --minify  --keep-names --format=iife --global-name=DC > dist/iife.js"
   },
   "keywords": [],
   "author": "",
   "dependencies": {
+    "esbuild": "0.8.33",
     "isomorphic-ws": "^4.0.1",
     "typescript": "^3.7.3",
     "ws": "^7.4.6"
