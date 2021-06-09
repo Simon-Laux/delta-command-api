@@ -106,7 +106,8 @@ mod tests {
                     command_id: 1,
                     invocation_id: 476
                 }
-            ),
+            )
+            .unwrap(),
             "{\"result\":\"Hello Echo\",\"invocation_id\":476}"
         );
     }
@@ -114,7 +115,7 @@ mod tests {
     #[test]
     fn errors() {
         assert_eq!(
-            run_json("{ \"command_id\": 1, \"invocation_id\": 0}", Command { command_id: 1, invocation_id: 0}),
+            run_json("{ \"command_id\": 1, \"invocation_id\": 0}", Command { command_id: 1, invocation_id: 0}).unwrap(),
             "{\"kind\":\"CommandParseFailure\",\"message\":\"command arguments invalid: Some(Error(\\\"missing field `message`\\\", line: 1, column: 38))\",\"invocation_id\":0}"
         );
     }
