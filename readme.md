@@ -1,11 +1,24 @@
 ### Test/demo instructions:
 
+run the example server part
 ```
 cargo run --example webserver
 ```
 
+setup/reset typescript dependencies
+(this also already builds the client)
+```
+./bin/reset_ts.sh
+```
+
+build typescript client:
+```
+cd typescript
+npm run build
+```
+
 start node debugger in vscode with `F5`
-go to debug console or alternativly you can start `typescript/websocket-example.js` in your browser and use its console. (but you might need to bundle it before)
+go to debug console or alternativly you can start `typescript/browser-example.html` in your browser and use it's console.
 
 ```js
 dc.openContext().log();

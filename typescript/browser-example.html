@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DC Command API Example</title>
+    <style>
+      table {
+        border: grey 2px double;
+        border-collapse: collapse;
+        margin: 5px;
+      }
+      td {
+        border: grey 1px solid;
+      }
+    </style>
+    <script src="./dist/iife.js"></script>
+
+    <script defer>
+      if (typeof DC === "undefined") {
+        const msg =
+          "<b>IMPORTANT</b>: you need to run `npm run generate_iife` first!<br>";
+        document.writeln(msg);
+        console.error(msg);
+      }
+
+      const { DeltaChat, WebsocketTransport, JSONTransport, Event_TypeID } = DC;
+
+      let websocket = new WebsocketTransport(
+        "ws://localhost:29031",
+        new JSONTransport()
+      );
+
+      const dc = new DeltaChat(websocket);
+
+      websocket.setup();
+
+      window.ws = websocket;
+
+      window.dc = dc;
+
+      setInterval(() => {}, 100000);
+
+      async function logInfoEvents() {
+        dc.on(Event_TypeID.INFO, console.info);
+        dc.on(Event_TypeID.WARNING, console.warn);
+        dc.on(Event_TypeID.ERROR, console.error);
+        dc.on(Event_TypeID.ERROR_NETWORK, console.error);
+        dc.on(Event_TypeID.ERROR_SELF_NOT_IN_GROUP, console.error);
+      }
+
+      window.logInfoEvents = logInfoEvents;
+
+      Promise.prototype.log = function () {
+        this.then(console.log).catch(console.error);
+        return this;
+      };
+
+      window.bench = async iterations => {
+        const unique = Number(Math.floor(Math.random() * 1000000)).toString(36);
+        const label = "bench" + unique;
+        const t1 = Date.now();
+        console.time(label);
+        for (let i = 0; i < iterations; i++) {
+          await dc.add(1, 4);
+        }
+        console.timeEnd(label);
+        const t2 = Date.now();
+        console.log((t2 - t1) / iterations);
+      };
+
+      window.pbench = async iterations => {
+        const unique = Number(Math.floor(Math.random() * 1000000)).toString(36);
+        const label = "start" + unique;
+        const label2 = "result" + unique;
+        const t1 = Date.now();
+        const promises = [];
+        console.time(label);
+        for (let i = 0; i < iterations; i++) {
+          promises.push(dc.add(1, 4));
+        }
+        console.timeEnd(label);
+        console.time(label2);
+        await Promise.all(promises);
+        console.timeEnd(label2);
+        const t2 = Date.now();
+        console.log((t2 - t1) / iterations);
+      };
+    </script>
+  </head>
+  <body>
+    Press F12 to open dev tools
+
+    <button id="start">Open Context and log events</button>
+
+    <div style="display: none;" id="context_methods">
+      <br />
+      <button id="info">info</button>
+      <button id="getChatList">getChatList</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+      const resultDiv = document.getElementById("result");
+      document.getElementById("start").onclick = async ev => {
+        ev.target.disabled = true;
+        try {
+          await dc.openContext();
+          logInfoEvents();
+        } catch (error) {
+          console.error("open context failed", error);
+          const node = document.createElement("p");
+          node.innerText = error;
+          resultDiv.prepend(node);
+          ev.target.disabled = false;
+        }
+        document.getElementById("context_methods").style.display = "";
+      };
+
+      // minimal h
+      let h = (type, content, css_class) => {
+        const node = document.createElement(type);
+        let hcontent = c => {
+          if (c instanceof Node) {
+            node.appendChild(c);
+          } else if (typeof c == "string") {
+            node.append(document.createTextNode(c));
+          }
+        };
+        if (Array.isArray(content)) {
+          content.map(hcontent);
+        } else {
+          hcontent(content);
+        }
+
+        if (css_class) node.classList.add(...css_class.split(" "));
+        return node;
+      };
+
+      document.getElementById("info").onclick = async () => {
+        let info = await dc.context.getInfo();
+        resultDiv.prepend(
+          h("table", [
+            h("thead", [h("tr", [h("td", "property"), h("td", "value")])]),
+            h(
+              "tbody",
+              Object.keys(info)
+                .sort()
+                .map(key =>
+                  h("tr", [h("td", key.replace(/_/g, " ")), h("td", info[key])])
+                )
+            )
+          ])
+        );
+      };
+
+      document.getElementById("getChatList").onclick = async () => {
+        let ids = await dc.context.chatList.getChatListIds(0);
+        console.log({ ids });
+        resultDiv.prepend(
+          h("p", [h("b", "chatlistids:"), JSON.stringify(ids)])
+        );
+        const res = await dc.context.chatList.getChatListItemsByIds(ids);
+        console.log(res);
+        resultDiv.prepend(h("p", JSON.stringify({ res })));
+
+        resultDiv.prepend(
+          h(
+            "ul",
+            Object.keys(res)
+              .map(r => JSON.stringify({ ...r }))
+              .map(c => h("li", c))
+          )
+        );
+      };
+    </script>
+  </body>
+</html>
