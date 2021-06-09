@@ -15,6 +15,4 @@ export {
   FullChat,
 } from "./deltachat/chatList";
 
-
 export * from "./deltachat/constants";
-  

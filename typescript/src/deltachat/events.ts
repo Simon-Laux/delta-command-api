@@ -25,7 +25,7 @@ export enum Event_TypeID {
   IMEX_PROGRESS = 2051,
   IMEX_FILE_WRITTEN = 2052,
   SECUREJOIN_INVITER_PROGRESS = 2060,
-  SECUREJOIN_JOINER_PROGRESS = 2061
+  SECUREJOIN_JOINER_PROGRESS = 2061,
 }
 
 type field1_string =
@@ -95,8 +95,8 @@ export type backend_json_event =
 export class DeltaEventEmitter {
   listeners: { [eventid: number]: CallableFunction[] };
 
-  constructor (){
-    this.listeners = {}
+  constructor() {
+    this.listeners = {};
   }
 
   emit(data: backend_json_event) {

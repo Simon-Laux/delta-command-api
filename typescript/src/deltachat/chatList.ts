@@ -81,7 +81,7 @@ export class ChatList {
     // TODO this now has two values [chatid, last message id]
     return this.transport.send(40, {
       listflags: listFlags,
-      ...options
+      ...options,
     });
   }
 
@@ -89,13 +89,13 @@ export class ChatList {
     chat_ids: number[]
   ): Promise<ChatListItemFetchResult[]> {
     return this.transport.send(41, {
-      chat_ids: chat_ids
+      chat_ids: chat_ids,
     });
   }
 
   async getFullChatById(chatId: number): Promise<FullChat> {
     return this.transport.send(46, {
-      chat_id_number: chatId
+      chat_id_number: chatId,
     });
   }
 }

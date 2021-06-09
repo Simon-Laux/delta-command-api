@@ -14,7 +14,7 @@ export class WebsocketTransport implements TransportMethod {
   socket: WebSocket;
   initialized = false;
   online = false;
-  eventEmitter: (data: backend_json_event) => void = _data => {};
+  eventEmitter: (data: backend_json_event) => void = (_data) => {};
 
   constructor(
     private address: string,
@@ -65,17 +65,17 @@ export class WebsocketTransport implements TransportMethod {
       const self = this; // socket event callback overwrites this to undefined sometimes
 
       this.socket.addEventListener("message", this.onMessage.bind(self));
-      this.socket.addEventListener("error", event => {
+      this.socket.addEventListener("error", (event) => {
         console.error(event);
         // todo handle error
         self.online = false;
         rej("socket error");
       });
-      this.socket.addEventListener("close", event => {
+      this.socket.addEventListener("close", (event) => {
         console.debug("socket is closed now");
         self.online = false;
       });
-      this.socket.addEventListener("open", event => {
+      this.socket.addEventListener("open", (event) => {
         console.debug("socket is open now");
         self.initialized = true;
         self.online = true;
@@ -102,7 +102,7 @@ export class WebsocketTransport implements TransportMethod {
     let data = {
       ...parameters,
       command_id: commandId,
-      invocation_id
+      invocation_id,
     };
     // console.log("sending:", data)
     this.socket.send(this.format.encode(data));
@@ -115,7 +115,7 @@ export class WebsocketTransport implements TransportMethod {
 
   _currentUnresolvedCallCount() {
     return Object.keys(this.callbacks).filter(
-      key => this.callbacks[Number(key)] !== null
+      (key) => this.callbacks[Number(key)] !== null
     ).length;
   }
 
