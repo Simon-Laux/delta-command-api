@@ -83,13 +83,13 @@ api_function!(
 );
 
 api_function!(
-    fn add(a: u32, b: u32) -> u32 {
+    fn add(a: i32, b: i32) -> i32 {
         a + b
     }
 );
 
 api_function!(
-    fn subtract(a: u32, b: u32) -> u32 {
+    fn subtract(a: i32, b: i32) -> i32 {
         a - b
     }
 );
