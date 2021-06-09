@@ -1,9 +1,13 @@
 import { TransportMethod } from "./transportMethod";
 import { ChatList } from "./deltachat/chatList";
+import { DeltaEventEmitter } from "./deltachat/events";
 
-export class DeltaChat {
+export class DeltaChat extends DeltaEventEmitter {
   private _context: Context | null;
-  constructor(public transport: TransportMethod) {}
+  constructor(public transport: TransportMethod) {
+    super();
+    transport.setEventEmitter(this.emit.bind(this));
+  }
 
   get context() {
     return this._context;
@@ -44,11 +48,6 @@ export class Context {
   /** get information abeout deltachat core and the current context */
   async getInfo(): Promise<{ [key: string]: string }> {
     return this.transport.send(21, {});
-  }
-
-  /** get the next event as string */
-  async _get_next_event_as_string(): Promise<string> {
-    return this.transport.send(22, {});
   }
 
   /** triggers an error to test error behaviour */

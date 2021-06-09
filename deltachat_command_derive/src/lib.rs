@@ -133,7 +133,7 @@ pub fn api_function2(input: TokenStream) -> TokenStream {
             #fn_inputs
         }
 
-        pub(crate) fn #fn_name(args: #arguments_ident, account: &Account) -> #return_type {
+        pub(crate) async fn #fn_name #fn_generics(args: #arguments_ident#fn_generics, account: &Account) -> #return_type {
             #argument_assigning
             #fn_block
         }
