@@ -1,3 +1,5 @@
+> **Deprecated**, use the new version of this instead: https://github.com/deltachat/dc_cmd_api
+
 ### Test/demo instructions:
 
 run the example server part
